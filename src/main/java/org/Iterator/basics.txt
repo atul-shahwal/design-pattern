@@ -1,0 +1,9 @@
+Iterator Design Pattern.
+we use always eg- we use collection framework.
+the iterator design pattern provides a way to access the elements of an object without exposing its underlying implementation.
+
+when we create a class and inside that class we store collection of objects
+    eg- Class contains list of users we use iterator to traverse user
+    inside Iterator design pattern we have an Interface containing two methods
+    hasNext()--boolean
+    nex()--to move to nex index

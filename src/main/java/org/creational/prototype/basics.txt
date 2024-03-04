@@ -1,0 +1,19 @@
+Prototype Design Pattern.
+
+THe concept is to cope an existing object rather than creating a new instance from scratch. because creating new object may be costly.
+This approach saves costly resources and time, especially when object creation is a heavy process.
+
+this is used while creating complex logic object eg-establishing a db connection
+we create object once and then do Cloning(copy) of it.
+
+Note: when we clone the object then we get the copy of Object
+    type of copy
+    1.Shallow Copy.
+    2.Deep Copy.
+    let's see from example
+    Shallow Copy: when we Create copy of object but the fields inside the copy objects points to the same heap memory of Original Object(references are same).
+                eg- if an object has an ArrayList(which is an object) inside it as a field, and we created a Shallow copy of that object when we try to mutate
+                    shallow copy object ArrayList then the original object ArrayList will also get mutated.
+
+    Deep Copy: to fix problem of shallow copy we use deep copy when we create deep copy of an object we don't get same reference but original
+                Object and Copy object are completely independent of each other

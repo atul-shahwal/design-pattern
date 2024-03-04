@@ -1,0 +1,11 @@
+Observer Design Patten
+1.It is a Behavioural Design pattern--it focus on the interaction of two Object rather than creation
+2.In this when subject changes the state all its dependent objects gets notified the changes.
+3.one-to-many relation
+
+eg-- YouTube channel is a Subject and all the subscriber are Observer so when ever video gets uploaded all of them are notified with the changes.
+
+Subject has three important methods
+1.subscribe-->or Register.
+2.unsubscribe-->or DeRegister.
+3.notifyChanges.

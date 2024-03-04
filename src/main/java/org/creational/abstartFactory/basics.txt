@@ -1,0 +1,4 @@
+Abstract Factory Design Pattern
+
+Similar to Factory Design Pattern.
+it provides the concept of Factory of Factories.

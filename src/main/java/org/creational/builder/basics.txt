@@ -1,0 +1,9 @@
+Builder Design Pattern.(Lombok etc.)
+
+While creating Object when object contains many attributes there are many problems that exists:
+    1.we have to pass many arguments to create object(parameters order may be hard to remember if there are too many)
+    2.Some parameter might be optional
+    3.factory class takes all responsibility for creating object. if the object as heavy as all complexity is the part of factory class.
+So in Builder pattern we create object step by step and finally return the final object with desired values of attributes
+
+builder pattern also helps a lop while creating immutable objects
