@@ -1,16 +1,24 @@
 package org.behaviouraldesignpattern.chainresponsibilityprinciple;
 
-public class LogProcessor {
+public abstract class LogProcessor {
 
-    LogProcessor nextLogProcessor;
+    public static int INFO = 1;
+    public static int DEBUG = 2;
+    public static int ERROR = 3;
 
-    public LogProcessor(LogProcessor logProcessor) {
-        this.nextLogProcessor = logProcessor;
+    LogProcessor nextLoggerProcessor;
+
+    LogProcessor(LogProcessor loggerProcessor) {
+
+        this.nextLoggerProcessor = loggerProcessor;
+
     }
-    void log(String message){
-        if(nextLogProcessor != null){
-            nextLogProcessor.log(message);
+
+    public void log(int logLevel, String message) {
+
+        if (nextLoggerProcessor != null) {
+            nextLoggerProcessor.log(logLevel, message);
         }
     }
-
 }
+

@@ -1,4 +1,4 @@
-package org.Iterator;
+package org.behaviouraldesignpattern.Iterator;
 
 public interface MyIterator {
     boolean hasNext();

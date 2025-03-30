@@ -1,4 +1,4 @@
-package org.Iterator;
+package org.behaviouraldesignpattern.Iterator;
 
 public class Main {
     public static void main(String[] args) {

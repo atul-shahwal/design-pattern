@@ -2,19 +2,20 @@ package org.behaviouraldesignpattern.chainresponsibilityprinciple;
 
 public class InfoLogProcessor extends LogProcessor{
 
-    private boolean canIHandle = false;
-
-    public InfoLogProcessor(LogProcessor logProcessor,boolean canIHandle) {
+    public InfoLogProcessor(LogProcessor logProcessor) {
         super(logProcessor);
-        this.canIHandle = true;
     }
 
     @Override
-    void log(String message){
-        if(canIHandle){
-            //process the message
-        }else {
-            super.log(message);
+    public void log(int logLevel,String message){
+
+        if(logLevel == INFO) {
+            System.out.println("INFO: " + message);
+        } else{
+
+            super.log(logLevel, message);
         }
+
     }
+
 }

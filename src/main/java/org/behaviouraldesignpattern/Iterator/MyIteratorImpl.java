@@ -1,4 +1,4 @@
-package org.Iterator;
+package org.behaviouraldesignpattern.Iterator;
 
 import java.util.List;
 

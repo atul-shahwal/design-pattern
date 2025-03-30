@@ -1,4 +1,4 @@
-package org.Iterator;
+package org.behaviouraldesignpattern.Iterator;
 
 public class User {
     private String name;
