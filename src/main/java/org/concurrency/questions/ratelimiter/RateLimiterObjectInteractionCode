@@ -1,0 +1,28 @@
+@startuml
+!theme plain
+title Rate Limiter - Sequence Diagram
+
+actor Client
+participant RateLimiterController as RLC
+participant TokenBucketStrategy as TBS
+participant Bucket as B
+
+Client -> RLC : processRequest(key)
+RLC -> TBS : giveAccess(key)
+
+alt per-user request
+    TBS -> TBS : getOrCreateUserBucket(key)
+    TBS -> B : tryConsume()
+else global request
+    TBS -> B : tryConsume()
+end
+
+B --> TBS : boolean
+TBS --> RLC : boolean
+RLC --> Client : CompletableFuture<Boolean>
+
+note over TBS,B
+  Scheduled refill runs periodically in background
+  Each Bucket refills tokens using ReentrantLock
+end note
+@enduml

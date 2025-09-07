@@ -1,0 +1,170 @@
+@startuml
+title Splitwise Expense Sharing System - Class Diagram
+
+class User {
+  - id: String
+  - name: String
+  - email: String
+  --
+  + getId(): String
+  + getName(): String
+  + getEmail(): String
+}
+note top of User
+Represents a user in the system
+with unique identifier
+Used in all expense calculations
+end note
+
+class Expense {
+  - id: String
+  - description: String
+  - amount: double
+  - payer: User
+  - participants: List<User>
+  - shares: Map<User, Double>
+  --
+  + getPayer(): User
+  + getParticipants(): List<User>
+  + getShares(): Map<User, Double>
+}
+note right of Expense
+Contains details about expenses:
+who paid, how much, and split details
+Core entity for expense tracking
+end note
+
+class Transaction {
+  - from: User
+  - to: User
+  - amount: double
+  --
+  + getFrom(): User
+  + getTo(): User
+  + getAmount(): double
+}
+note right of Transaction
+Represents a payment between
+users for settling debts
+Output of settlement algorithm
+end note
+
+class UserPair {
+  - user1: User
+  - user2: User
+  --
+  + getUser1(): User
+  + getUser2(): User
+}
+note right of UserPair
+Helper class for tracking
+balances between user pairs
+Used in balance calculations
+end note
+
+interface Split {
+  + calculateSplit(amount: double, participants: List<User>, splitDetails: Map<String, Object>): Map<User, Double>
+}
+note right of Split
+Interface for different split types
+(Factory Pattern)
+Allows extensibility
+end note
+
+class EqualSplit {
+  + calculateSplit(amount: double, participants: List<User>, splitDetails: Map<String, Object>): Map<User, Double>
+}
+note right of EqualSplit
+Implements equal expense splitting
+Divides amount equally among participants
+end note
+
+class PercentageSplit {
+  + calculateSplit(amount: double, participants: List<User>, splitDetails: Map<String, Object>): Map<User, Double>
+}
+note right of PercentageSplit
+Implements percentage-based
+expense splitting
+Uses predefined percentages
+end note
+
+class SplitFactory {
+  + createSplit(splitType: String): Split
+}
+note right of SplitFactory
+Factory Pattern implementation
+for creating split instances
+Centralizes creation logic
+end note
+
+interface ExpenseObserver {
+  + onExpenseAdded(expense: Expense)
+  + onExpenseUpdated(expense: Expense)
+}
+note right of ExpenseObserver
+Observer interface for
+expense updates
+(Observer Pattern)
+end note
+
+interface ExpenseSubject {
+  + addObserver(observer: ExpenseObserver)
+  + removeObserver(observer: ExpenseObserver)
+  + notifyExpenseAdded(expense: Expense)
+  + notifyExpenseUpdated(expense: Expense)
+}
+note right of ExpenseSubject
+Subject interface for
+Observer Pattern
+Manages observer registration
+end note
+
+class ExpenseManager {
+  - observers: List<ExpenseObserver>
+  - expenses: List<Expense>
+  --
+  + addExpense(expense: Expense)
+  + updateExpense(expense: Expense)
+  + getAllExpenses(): List<Expense>
+}
+note right of ExpenseManager
+Manages expenses and implements
+Observer Pattern as Subject
+Central component of system
+end note
+
+class BalanceSheet {
+  - balances: Map<UserPair, Double>
+  --
+  + getBalance(user1: User, user2: User): double
+  + getTotalBalance(user: User): double
+  + getSimplifiedSettlements(): List<Transaction>
+  + getMinimumSettlements(): int
+}
+note right of BalanceSheet
+Tracks balances between users
+and calculates settlements
+Implements Observer Pattern
+end note
+
+' Relationships
+User "1" *-- "*" Expense : pays
+Expense "1" *-- "*" User : involves
+Expense "1" *-- "*" User : shares
+
+ExpenseManager ||..|> ExpenseSubject
+BalanceSheet ||..|> ExpenseObserver
+ExpenseManager "1" *-- "*" Expense : manages
+
+Split <|-- EqualSplit
+Split <|-- PercentageSplit
+SplitFactory ..> Split : creates
+
+BalanceSheet "1" *-- "*" UserPair : tracks
+UserPair "2" *-- "2" User : connects
+
+Transaction "1" *-- "1" User : from
+Transaction "1" *-- "1" User : to
+
+Expense "1" *-- "1" Split : uses
+@enduml

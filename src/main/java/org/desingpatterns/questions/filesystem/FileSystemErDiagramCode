@@ -1,0 +1,228 @@
+@startuml
+skinparam BackgroundColor #F9F9F9
+skinparam ClassBackgroundColor #FFFFFF
+skinparam ClassBorderColor #333333
+skinparam ArrowColor #444444
+skinparam NoteBackgroundColor #FFFFCC
+skinparam NoteBorderColor #333333
+
+' Interfaces and Abstract Classes
+interface "Command" as InterfaceCommand {
+  + execute(): void
+  + isValid(): boolean
+}
+
+note top of InterfaceCommand
+  <b>Command Pattern - Interface</b>
+  Defines the contract for all command objects.
+end note
+
+abstract class FileSystemCommand {
+  # fileSystem: FileSystem
+  # args: String[]
+  + {abstract} execute(): void
+  + {abstract} isValid(): boolean
+}
+
+note top of FileSystemCommand
+  <b>Abstract Base Command</b>
+  Provides common fields (FileSystem, args)
+  for all concrete commands.
+end note
+
+abstract class "FileSystemNode" as AbstractFileSystemNode {
+  - name: String
+  - children: Map<String, FileSystemNode>
+  - createdAt: LocalDateTime
+  - modifiedAt: LocalDateTime
+  --
+  + addChild(name: String, child: FileSystemNode): void
+  + hasChild(name: String): boolean
+  + getChild(name: String): FileSystemNode
+  + removeChild(name: String): boolean
+  + {abstract} isFile(): boolean
+  + {abstract} display(depth: int): void
+  + getName(): String
+  + getChildren(): Collection<FileSystemNode>
+  + getCreatedAt(): LocalDateTime
+  + getModifiedAt(): LocalDateTime
+  # updateModifiedTime(): void
+}
+
+note top of AbstractFileSystemNode
+  <b>Composite Pattern - Component</b>
+  Defines shared properties and operations
+  for both files and directories.
+end note
+
+' Concrete Classes
+class "File" as FileClass {
+  - content: String
+  - extension: String
+  --
+  + setContent(content: String): void
+  + getContent(): String
+  + isFile(): boolean
+  + display(depth: int): void
+  - extractExtension(name: String): String
+}
+
+note top of FileClass
+  <b>Composite Pattern - Leaf</b>
+  Represents an individual file and stores
+  its content and extension.
+end note
+
+class "Directory" as DirectoryClass {
+  --
+  + isFile(): boolean
+  + display(depth: int): void
+}
+
+note top of DirectoryClass
+  <b>Composite Pattern - Composite</b>
+  Represents directories that can contain
+  both files and other directories.
+end note
+
+class "FileSystem" as FileSystemCore {
+  - root: FileSystemNode
+  --
+  + isValidFilePath(path: String): boolean
+  + createPath(path: String): boolean
+  - getNode(path: String): FileSystemNode
+  + deletePath(path: String): boolean
+  + display(): void
+  + setFileContent(path: String, content: String): boolean
+  + getFileContent(path: String): String
+  - getParentPath(path: String): String
+}
+
+note top of FileSystemCore
+  <b>System Core</b>
+  Manages file and directory operations
+  using a tree-like structure.
+end note
+
+class "CommandFactory" {
+  - fileSystem: FileSystem
+  --
+  + createCommand(input: String, isRunning: boolean): Command
+}
+
+note top of CommandFactory
+  <b>Factory Pattern</b>
+  Parses user input and instantiates
+  the correct command object.
+end note
+
+' Command Implementations
+class "CreateCommand" {
+  + execute(): void
+  + isValid(): boolean
+}
+
+note top of CreateCommand
+  Creates a new file or directory at
+  the specified path.
+end note
+
+class "WriteCommand" {
+  + execute(): void
+  + isValid(): boolean
+}
+
+note top of WriteCommand
+  Writes content into a file at
+  the given path.
+end note
+
+class "ReadCommand" {
+  + execute(): void
+  + isValid(): boolean
+}
+
+note top of ReadCommand
+  Reads and outputs the content
+  of a specified file.
+end note
+
+class "DeleteCommand" {
+  + execute(): void
+  + isValid(): boolean
+}
+
+note top of DeleteCommand
+  Deletes a file or directory
+  from the system.
+end note
+
+class "DisplayCommand" {
+  + execute(): void
+}
+
+note top of DisplayCommand
+  Displays the entire file system
+  hierarchy in a structured format.
+end note
+
+class "ExitCommand" {
+  - isRunning: boolean
+  --
+  + execute(): void
+  + isRunning(): boolean
+}
+
+note top of ExitCommand
+  Exits the file system client
+  and terminates execution.
+end note
+
+class "FileSystemClient" {
+  - fs: FileSystem
+  - scanner: Scanner
+  - isRunning: boolean
+  - factory: CommandFactory
+  --
+  + main(args: String[]): void
+}
+
+note top of FileSystemClient
+  <b>Main Client</b>
+  Entry point of the application that
+  accepts user input and executes commands.
+end note
+
+' Relationships
+InterfaceCommand <|.. FileSystemCommand
+FileSystemCommand <|-- CreateCommand
+FileSystemCommand <|-- WriteCommand
+FileSystemCommand <|-- ReadCommand
+FileSystemCommand <|-- DeleteCommand
+FileSystemCommand <|-- DisplayCommand
+FileSystemCommand <|-- ExitCommand
+
+AbstractFileSystemNode <|-- FileClass
+AbstractFileSystemNode <|-- DirectoryClass
+
+FileSystemCore --> "1" AbstractFileSystemNode : contains *
+
+FileSystemClient --> FileSystemCore : uses
+FileSystemClient --> CommandFactory : uses
+
+CommandFactory --> FileSystemCore : uses
+CommandFactory ..> InterfaceCommand : creates
+
+CreateCommand --> FileSystemCore : operates on
+WriteCommand --> FileSystemCore : operates on
+ReadCommand --> FileSystemCore : operates on
+DeleteCommand --> FileSystemCore : operates on
+DisplayCommand --> FileSystemCore : operates on
+
+' Layout adjustments
+FileSystemCore -[hidden]d- AbstractFileSystemNode
+AbstractFileSystemNode -[hidden]d- InterfaceCommand
+InterfaceCommand -[hidden]r- FileSystemCommand
+FileSystemCommand -[hidden]r- CommandFactory
+CommandFactory -[hidden]r- FileSystemClient
+@enduml

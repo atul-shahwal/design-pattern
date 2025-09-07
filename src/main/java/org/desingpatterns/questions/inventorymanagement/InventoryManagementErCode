@@ -1,0 +1,149 @@
+@startuml
+' Entities
+entity Product {
+  + sku: String (PK)
+  --
+  # name: String
+  # price: double
+  # quantity: int
+  # threshold: int
+  # category: ProductCategory
+  --
+  + addStock(quantity: int)
+  + removeStock(quantity: int)
+  + getProductDetails(): String
+}
+
+entity ElectronicsProduct {
+  + brand: String
+  + warrantyPeriod: int
+}
+
+entity ClothingProduct {
+  + size: String
+  + color: String
+}
+
+entity Warehouse {
+  + id: String (PK)
+  --
+  # name: String
+  # location: String
+  --
+  + addProduct(product: Product, quantity: int)
+  + removeProduct(sku: String, quantity: int): boolean
+  + transferProduct(sku: String, quantity: int, destination: Warehouse)
+}
+
+entity InventoryManager {
+  - instance: InventoryManager
+  --
+  + getInstance(): InventoryManager
+  + addWarehouse(warehouse: Warehouse)
+  + removeWarehouse(warehouse: Warehouse)
+  + addObserver(observer: InventoryObserver)
+  + removeObserver(observer: InventoryObserver)
+  + setReplenishmentStrategy(strategy: ReplenishmentStrategy)
+  + createProduct(category: ProductCategory, sku: String, name: String, price: double, quantity: int, threshold: int): Product
+  + checkStockLevels()
+  + generateInventoryReport()
+}
+
+' Relationships
+Product ||--|{ Warehouse : "stored in"
+Product ||--o| ElectronicsProduct : "extends"
+Product ||--o| ClothingProduct : "extends"
+
+InventoryManager ||--o{ Warehouse : "manages"
+InventoryManager }o--|| ReplenishmentStrategy : "uses"
+InventoryManager }o--o{ InventoryObserver : "notifies"
+
+' Interfaces
+interface ReplenishmentStrategy {
+  + replenish(product: Product)
+}
+
+interface InventoryObserver {
+  + update(product: Product)
+}
+
+' Enumerations
+enum ProductCategory {
+  ELECTRONICS
+  CLOTHING
+  GROCERY
+  FURNITURE
+  OTHER
+}
+
+enum InventoryOperation {
+  ADD
+  REMOVE
+  TRANSFER
+  ADJUST
+}
+
+' Implementations
+class JustInTimeStrategy {
+  + replenish(product: Product)
+}
+
+class BulkOrderStrategy {
+  + replenish(product: Product)
+}
+
+class SupplierNotifier {
+  + update(product: Product)
+}
+
+class DashboardAlert {
+  + update(product: Product)
+}
+
+JustInTimeStrategy ..|> ReplenishmentStrategy
+BulkOrderStrategy ..|> ReplenishmentStrategy
+
+SupplierNotifier ..|> InventoryObserver
+DashboardAlert ..|> InventoryObserver
+
+' Notes
+note top of Product
+  Design Patterns:
+  - Builder Pattern: Fluent interface for creation
+  - Template Method: Defines product operations
+end note
+
+note top of InventoryManager
+  Design Patterns:
+  - Singleton: Single instance for consistency
+  - Observer: Manages inventory notifications
+  - Strategy: Interchangeable replenishment algorithms
+end note
+
+note top of JustInTimeStrategy
+  Implements ReplenishmentStrategy.
+  Orders stock only when product quantity
+  falls below threshold.
+  - Minimizes holding costs.
+  - May risk frequent stockouts.
+end note
+
+note top of BulkOrderStrategy
+  Implements ReplenishmentStrategy.
+  Places bulk orders once stock falls below threshold.
+  - Leverages supplier discounts.
+  - Increases holding costs but reduces order frequency.
+end note
+
+note top of SupplierNotifier
+  Implements InventoryObserver.
+  Notifies external suppliers when stock
+  needs replenishment.
+end note
+
+note top of DashboardAlert
+  Implements InventoryObserver.
+  Updates internal dashboards to alert staff
+  about stock shortages or replenishment actions.
+end note
+@enduml

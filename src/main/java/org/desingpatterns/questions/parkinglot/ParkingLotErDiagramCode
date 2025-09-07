@@ -1,0 +1,140 @@
+@startuml
+title Parking Lot System Entity Relationship Diagram
+
+'=== ENUMS ===
+enum VehicleType {
+    BIKE
+    CAR
+    TRUCK
+}
+
+enum SlotStatus {
+    AVAILABLE
+    OCCUPIED
+    MAINTENANCE
+}
+
+enum PaymentStatus {
+    PENDING
+    COMPLETED
+    FAILED
+    REFUNDED
+}
+
+'=== INTERFACES ===
+interface PaymentStrategy {
+    + processPayment(amount: double): boolean
+    + refundPayment(amount: double): boolean
+}
+
+'=== CLASSES ===
+class CashPayment {
+    + processPayment(amount: double): boolean
+    + refundPayment(amount: double): boolean
+}
+note right: Concrete implementation of PaymentStrategy\nHandles cash transactions
+
+abstract class Vehicle {
+    - licensePlate: String
+    - type: VehicleType
+    - needsCharging: boolean
+    + {abstract} calculateParkingFee(duration: long): double
+}
+note right: Base vehicle class\nDefines common properties and abstract fee calculation
+
+class Bike {
+    + calculateParkingFee(duration: long): double
+}
+note right: $0.5 per hour rate
+
+class Car {
+    + calculateParkingFee(duration: long): double
+}
+note right: $2.0 per hour rate
+
+class Truck {
+    + calculateParkingFee(duration: long): double
+}
+note right: $4.0 per hour rate
+
+class ParkingSlot {
+    - slotId: int
+    - type: VehicleType
+    - status: SlotStatus
+    - vehicle: Vehicle
+    - isReserved: boolean
+    - isElectricChargingAvailable: boolean
+    + parkVehicle(vehicle: Vehicle): boolean
+    + freeSlot()
+    + isAvailable(): boolean
+}
+note right: Represents individual parking spaces\nManages occupancy and reservations
+
+class Floor {
+    - floorNumber: int
+    - name: String
+    - slots: Map<Integer, ParkingSlot>
+    - capacityByType: Map<VehicleType, Integer>
+    - availableSlotsByType: Map<VehicleType, Integer>
+    + findAvailableSlot(vehicleType: VehicleType): ParkingSlot
+    + updateAvailableSlots(vehicleType: VehicleType, delta: int)
+}
+note right: Manages collection of parking slots\nTracks capacity by vehicle type
+
+class Building {
+    - buildingId: String
+    - name: String
+    - address: String
+    - floors: Map<Integer, Floor>
+    - totalCapacityByType: Map<VehicleType, Integer>
+    - availableSlotsByType: Map<VehicleType, Integer>
+    + findAvailableSlot(vehicleType: VehicleType): ParkingSlot
+    + updateAvailableSlots(vehicleType: VehicleType, delta: int)
+}
+note right: Contains multiple floors\nAggregates slot information across floors
+
+class ParkingTicket {
+    - ticketId: int
+    - vehicle: Vehicle
+    - slot: ParkingSlot
+    - building: Building
+    - floor: Floor
+    - entryTime: LocalDateTime
+    - exitTime: LocalDateTime
+    - paymentStatus: PaymentStatus
+    - fee: double
+    + calculateFee(): double
+    + markAsPaid()
+}
+note right: Tracks vehicle parking session\nCalculates fees and manages payment status
+
+class ParkingLot {
+    - buildings: Map<String, Building>
+    - activeTickets: Map<Integer, ParkingTicket>
+    - nextTicketId: int
+    + parkVehicle(vehicle: Vehicle, preferredBuilding: String): ParkingTicket
+    + processExit(ticketId: int, paymentStrategy: PaymentStrategy): boolean
+    + getAvailableSlotsCount(vehicleType: VehicleType, buildingId: String): int
+}
+note right: Main system coordinator\nManages multiple buildings and active sessions
+
+'=== RELATIONSHIPS ===
+PaymentStrategy <|.. CashPayment
+Vehicle <|-- Bike
+Vehicle <|-- Car
+Vehicle <|-- Truck
+
+ParkingLot "1" *-- "many" Building
+Building "1" *-- "many" Floor
+Floor "1" *-- "many" ParkingSlot
+
+ParkingTicket "1" --> "1" Vehicle
+ParkingTicket "1" --> "1" ParkingSlot
+ParkingTicket "1" --> "1" Building
+ParkingTicket "1" --> "1" Floor
+
+ParkingSlot "1" --> "0..1" Vehicle
+ParkingLot "1" --> "many" ParkingTicket
+
+ParkingLot ..> PaymentStrategy : uses
+@enduml

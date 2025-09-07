@@ -1,0 +1,176 @@
+@startuml
+!theme plain
+
+' Define enums
+enum BookingStatus {
+  CREATED
+  CONFIRMED
+  EXPIRED
+}
+
+enum SeatCategory {
+  SILVER
+  GOLD
+  PLATINUM
+}
+
+' Classes with notes
+class Movie {
+  - movieId: int
+  - movieName: String
+  - durationInMinutes: int
+  --
+  + getMovieId(): int
+  + getMovieName(): String
+  + getDuration(): int
+}
+note right of Movie: Represents a movie with its details.\nUsed to store movie information.
+
+class Seat {
+  - seatId: int
+  - row: int
+  - category: SeatCategory
+  --
+  + getSeatId(): int
+  + getRow(): int
+  + getCategory(): SeatCategory
+}
+note right of Seat: Represents a physical seat in a screen.\nHas a unique ID, row number, and category.
+
+class Screen {
+  - screenId: int
+  - name: String
+  - seats: List<Seat>
+  --
+  + getScreenId(): int
+  + getSeats(): List<Seat>
+  + addSeat(Seat)
+}
+note right of Screen: Represents a screen in a theatre.\nContains a list of seats.
+
+class Show {
+  - showId: int
+  - movie: Movie
+  - screen: Screen
+  - startTime: Date
+  - duration: int
+  --
+  + getShowId(): int
+  + getMovie(): Movie
+  + getScreen(): Screen
+  + getStartTime(): Date
+}
+note right of Show: Represents a show of a movie in a screen at a specific time.
+
+class Theatre {
+  - theatreId: int
+  - name: String
+  - screens: List<Screen>
+  --
+  + getTheatreId(): int
+  + getScreens(): List<Screen>
+  + addScreen(Screen)
+}
+note right of Theatre: Represents a theatre with multiple screens.
+
+class User {
+  - name: String
+  - email: String
+  --
+  + getName(): String
+  + getEmail(): String
+}
+note right of User: Represents a user of the system.
+
+class Booking {
+  - bookingId: String
+  - show: Show
+  - seats: List<Seat>
+  - user: User
+  - status: BookingStatus
+  --
+  + getBookingId(): String
+  + getShow(): Show
+  + getSeats(): List<Seat>
+  + getUser(): User
+  + getStatus(): BookingStatus
+  + confirm()
+  + expire()
+  + isConfirmed(): boolean
+}
+note right of Booking: Represents a booking made by a user for a show.\nTracks the status of the booking.
+
+interface SeatLockProvider {
+  + lockSeats(Show, List<Seat>, User)
+  + unlockSeats(Show, List<Seat>, User)
+  + validateLock(Show, Seat, User): boolean
+  + getLockedSeats(Show): List<Seat>
+}
+note right of SeatLockProvider: Interface for seat locking mechanism.\nAllows different implementations.
+
+class InMemorySeatLock {
+  - timeout: int
+  - locks: Map<String, Map<Seat, Date>>
+  --
+  + lockSeats(Show, List<Seat>, User)
+  + unlockSeats(Show, List<Seat>, User)
+  + validateLock(Show, Seat, User): boolean
+  + getLockedSeats(Show): List<Seat>
+  - isLockExpired(Date): boolean
+}
+note right of InMemorySeatLock: In-memory implementation of SeatLockProvider.\nUses a map to store locks with expiration.
+
+class BookingService {
+  - bookings: Map<String, Booking>
+  - lockProvider: SeatLockProvider
+  - bookingIdCounter: AtomicInteger
+  --
+  + createBooking(Show, User, List<Seat>): Booking
+  + confirmBooking(String)
+  + releaseSeatLocks(Booking)
+  + isSeatAvailable(Show, Seat): boolean
+  + getBooking(String): Booking
+  + getAllBookings(): List<Booking>
+  - getUnavailableSeats(Show): List<Seat>
+}
+note right of BookingService: Manages bookings and interacts with SeatLockProvider.\nHandles booking creation, confirmation, and seat availability.
+
+interface PaymentStrategy {
+  + processPayment(double): boolean
+}
+note right of PaymentStrategy: Strategy interface for payment processing.
+
+class CreditCardPayment {
+  + processPayment(double): boolean
+}
+note right of CreditCardPayment: Payment strategy for credit card payments.
+
+class PayPalPayment {
+  + processPayment(double): boolean
+}
+note right of PayPalPayment: Payment strategy for PayPal payments.
+
+class PaymentService {
+  - paymentStrategy: PaymentStrategy
+  - bookingService: BookingService
+  --
+  + processPayment(String, double): boolean
+}
+note right of PaymentService: Handles payment processing using a strategy.\nInteracts with BookingService to confirm booking and release locks.
+
+' Relationships
+Theatre "1" *-- "many" Screen : contains
+Screen "1" *-- "many" Seat : contains
+Movie "1" *-- "many" Show : featured_in
+Screen "1" *-- "many" Show : hosts
+Show "1" *-- "many" Booking : has_bookings
+User "1" *-- "many" Booking : makes
+Booking "1" *-- "many" Seat : reserves
+
+BookingService ..> SeatLockProvider : uses
+PaymentService ..> PaymentStrategy : uses
+PaymentService ..> BookingService : uses
+InMemorySeatLock ..|> SeatLockProvider : implements
+CreditCardPayment ..|> PaymentStrategy : implements
+PayPalPayment ..|> PaymentStrategy : implements
+@enduml

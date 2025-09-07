@@ -1,0 +1,56 @@
+@startuml
+title Parking Lot System - Object Interaction Diagram
+
+actor Driver
+participant "Main Application" as Main
+participant "ParkingLot Manager" as ParkingLot
+participant "Building B1" as Building
+participant "Ground Floor" as Floor
+participant "Parking Slot #101" as ParkingSlot
+participant "Parking Ticket" as ParkingTicket
+participant "Vehicle CAR-ABC123" as Vehicle
+participant "Cash Payment Processor" as PaymentStrategy
+
+Driver -> Main: Request to park vehicle
+Main -> Vehicle: createVehicle("ABC123", CAR, false)
+Main -> ParkingLot: requestParking(Vehicle, "B1")
+
+ParkingLot -> ParkingLot: findAvailableSlotForVehicle(CAR, "B1")
+ParkingLot -> Building: findAvailableParkingSlot(CAR)
+Building -> Floor: findAvailableParkingSlot(CAR)
+Floor -> ParkingSlot: checkAvailability()
+ParkingSlot --> Floor: slotAvailable=true
+Floor --> Building: return ParkingSlot#101
+Building --> ParkingLot: return ParkingSlot#101
+
+ParkingLot -> ParkingSlot: assignVehicleToSlot(Vehicle)
+ParkingSlot --> ParkingLot: vehicleAssigned=true
+
+ParkingLot -> Building: updateSlotAvailability(CAR, -1)
+ParkingLot -> Floor: updateSlotAvailability(CAR, -1)
+
+ParkingLot -> ParkingTicket: generateTicket(Vehicle, ParkingSlot, Building, Floor)
+ParkingLot --> Main: return ParkingTicket#123
+Main --> Driver: Issue Parking Ticket #123
+
+Driver -> Main: Request to exit with payment
+Main -> PaymentStrategy: initializeCashPayment()
+Main -> ParkingLot: processVehicleExit(Ticket#123, PaymentStrategy)
+
+ParkingLot -> ParkingTicket: calculateParkingFee()
+ParkingTicket -> Vehicle: calculateFeeBasedOnDuration()
+Vehicle --> ParkingTicket: return feeAmount
+ParkingTicket --> ParkingLot: return $15.50
+
+ParkingLot -> PaymentStrategy: processPayment($15.50)
+PaymentStrategy --> ParkingLot: paymentSuccessful=true
+
+ParkingLot -> ParkingTicket: markPaymentAsCompleted()
+ParkingLot -> ParkingSlot: releaseParkingSlot()
+ParkingLot -> Building: updateSlotAvailability(CAR, +1)
+ParkingLot -> Floor: updateSlotAvailability(CAR, +1)
+ParkingLot -> ParkingLot: removeActiveTicket(#123)
+
+ParkingLot --> Main: exitProcessCompleted=true
+Main --> Driver: Exit confirmed. Thank you!
+@enduml

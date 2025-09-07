@@ -1,0 +1,36 @@
+@startuml
+!theme plain
+title Kafka-like Pub-Sub Sequence Diagram
+
+actor Publisher as P
+participant KafkaController as KC
+participant Topic as T
+participant TopicSubscriber as TS
+participant Subscriber as S
+
+== Publisher publishes message ==
+P -> KC : publish(topicId, Message)
+KC -> T : addMessage(Message)
+KC -> TS : acquire lock
+TS -> TS : check offset < topic.size()
+TS -> TS : signal() (new message available)
+TS -> TS : release lock
+
+== Subscriber consumes message ==
+TS -> TS : acquire lock
+TS -> TS : check offset < topic.size()
+TS -> T : getMessageAt(offset)
+TS -> S : onMessage(Message)
+TS -> TS : logConsumption(Message)
+TS -> TS : release lock
+
+note over TS,S
+  TopicSubscriber maintains per-subscriber lock,
+  waits if no new message, updates offset after consumption,
+  and logs the message.
+end note
+
+== Repeat for all subscribers ==
+KC -> TS : signal all waiting subscribers
+TS -> S : consume messages concurrently via ExecutorService
+@enduml

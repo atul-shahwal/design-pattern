@@ -1,0 +1,254 @@
+@startuml
+title Car Rental System - ER Diagram
+
+package "Enums" {
+  enum VehicleType {
+    ECONOMY
+    LUXURY
+    SUV
+    BIKE
+    AUTO
+  }
+
+  enum VehicleStatus {
+    AVAILABLE
+    RESERVED
+    RENTED
+    MAINTENANCE
+    OUT_OF_SERVICE
+  }
+
+  enum ReservationStatus {
+    PENDING
+    CONFIRMED
+    IN_PROGRESS
+    COMPLETED
+    CANCELED
+  }
+}
+
+class Location {
+  - address: String
+  - city: String
+  - state: String
+  - zipCode: String
+  + toString(): String
+}
+
+note top of Location
+  Represents a rental store location.
+  Encapsulates address details for pickup and return.
+end note
+
+class Vehicle {
+  - registrationNumber: String
+  - model: String
+  - type: VehicleType
+  - status: VehicleStatus
+  - baseRentalPrice: double
+  + calculateRentalFee(days: int): double
+  + getRegistrationNumber(): String
+  + getStatus(): VehicleStatus
+  + setStatus(status: VehicleStatus): void
+}
+
+note top of Vehicle
+  Base class for all vehicles.
+  Defines common properties like registration, model,
+  type, status, and base rental fee.
+  Uses Template Method pattern for calculateRentalFee.
+end note
+
+class EconomyVehicle {
+  - RATE_MULTIPLIER: double = 1.0
+  + calculateRentalFee(days: int): double
+}
+
+note top of EconomyVehicle
+  Concrete Vehicle subclass.
+  Implements calculateRentalFee with base rate multiplier.
+end note
+
+class LuxuryVehicle {
+  - RATE_MULTIPLIER: double = 2.5
+  - PREMIUM_FEE: double = 50.0
+  + calculateRentalFee(days: int): double
+}
+
+note top of LuxuryVehicle
+  Concrete Vehicle subclass.
+  Higher multiplier and premium fee.
+  Example of specialization with overridden behavior.
+end note
+
+class SUVVehicle {
+  - RATE_MULTIPLIER: double = 1.5
+  + calculateRentalFee(days: int): double
+}
+
+note top of SUVVehicle
+  Concrete Vehicle subclass.
+  Implements calculateRentalFee with SUV rate multiplier.
+end note
+
+class VehicleFactory {
+  + createVehicle(type: VehicleType, registrationNumber: String, model: String, baseRentalPrice: double): Vehicle
+}
+
+note top of VehicleFactory
+  Implements Factory Method Pattern.
+  Encapsulates logic for creating different types of vehicles.
+end note
+
+class User {
+  - id: int
+  - name: String
+  - email: String
+  - reservations: List<Reservation>
+  + addReservation(reservation: Reservation): void
+  + removeReservation(reservation: Reservation): void
+}
+
+note top of User
+  Represents a system user who makes reservations.
+  Maintains a list of their reservations.
+end note
+
+class RentalStore {
+  - id: int
+  - name: String
+  - location: Location
+  - vehicles: Map<String, Vehicle>
+  + getAvailableVehicles(startDate: Date, endDate: Date): List<Vehicle>
+  + addVehicle(vehicle: Vehicle): void
+  + removeVehicle(registrationNumber: String): void
+  + isVehicleAvailable(registrationNumber: String, startDate: Date, endDate: Date): boolean
+}
+
+note top of RentalStore
+  Represents a rental store location.
+  Manages its vehicles and availability checks.
+end note
+
+class Reservation {
+  - id: int
+  - user: User
+  - vehicle: Vehicle
+  - pickupStore: RentalStore
+  - returnStore: RentalStore
+  - startDate: Date
+  - endDate: Date
+  - status: ReservationStatus
+  - totalAmount: double
+  + confirmReservation(): void
+  + startRental(): void
+  + completeRental(): void
+  + cancelReservation(): void
+}
+
+note top of Reservation
+  Represents a booking between a user and a vehicle.
+  Tracks rental lifecycle states (Pending → Confirmed → In Progress → Completed/Cancelled).
+end note
+
+class ReservationManager {
+  - reservations: Map<Integer, Reservation>
+  - nextReservationId: int
+  + createReservation(user: User, vehicle: Vehicle, pickupStore: RentalStore, returnStore: RentalStore, startDate: Date, endDate: Date): Reservation
+  + confirmReservation(reservationId: int): void
+  + startRental(reservationId: int): void
+  + completeRental(reservationId: int): void
+  + cancelReservation(reservationId: int): void
+}
+
+note top of ReservationManager
+  Manages all reservations.
+  Acts as a mediator between Users, Vehicles, and Stores.
+end note
+
+interface PaymentStrategy {
+  + processPayment(amount: double): boolean
+}
+
+note top of PaymentStrategy
+  Strategy Pattern:
+  Defines a common interface for different payment methods.
+  Allows runtime selection of payment type.
+end note
+
+class CreditCardPayment {
+  - cardNumber: String
+  - name: String
+  - expiryDate: String
+  + processPayment(amount: double): boolean
+}
+
+note top of CreditCardPayment
+  Concrete Strategy.
+  Implements payment processing via credit card.
+end note
+
+class CashPayment {
+  + processPayment(amount: double): boolean
+}
+
+note top of CashPayment
+  Concrete Strategy.
+  Implements payment processing with cash.
+end note
+
+class PayPalPayment {
+  - email: String
+  + processPayment(amount: double): boolean
+}
+
+note top of PayPalPayment
+  Concrete Strategy.
+  Implements payment processing via PayPal.
+end note
+
+class PaymentProcessor {
+  + processPayment(amount: double, paymentStrategy: PaymentStrategy): boolean
+}
+
+note top of PaymentProcessor
+  Context class in Strategy Pattern.
+  Delegates payment handling to the selected strategy.
+end note
+
+class RentalSystem {
+  - instance: RentalSystem
+  - stores: List<RentalStore>
+  - vehicleFactory: VehicleFactory
+  - reservationManager: ReservationManager
+  - paymentProcessor: PaymentProcessor
+  - users: Map<Integer, User>
+  - nextUserId: int
+  + getInstance(): RentalSystem
+  + addStore(store: RentalStore): void
+  + registerUser(name: String, email: String): User
+  + createReservation(userId: int, vehicleRegistration: String, pickupStoreId: int, returnStoreId: int, startDate: Date, endDate: Date): Reservation
+  + processPayment(reservationId: int, paymentStrategy: PaymentStrategy): boolean
+}
+
+note top of RentalSystem
+  Facade + Singleton Pattern.
+  Provides a unified interface to manage stores,
+  vehicles, reservations, and payments.
+  Ensures only one instance of the system exists.
+end note
+
+' Relationships
+Vehicle }|..|{ RentalStore : contains
+Vehicle }|..|{ VehicleFactory : creates
+Reservation }o--|| User : has
+Reservation }|--|| Vehicle : uses
+Reservation }|--|| RentalStore : pickup location
+Reservation }|--|| RentalStore : return location
+ReservationManager }o--|| Reservation : manages
+PaymentProcessor }o--|| PaymentStrategy : uses
+RentalSystem }o--|| RentalStore : manages
+RentalSystem }o--|| User : manages
+RentalSystem }o--|| ReservationManager : uses
+RentalSystem }o--|| PaymentProcessor : uses
+@enduml

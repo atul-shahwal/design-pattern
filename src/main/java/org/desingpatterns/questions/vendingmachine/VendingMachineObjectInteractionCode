@@ -1,0 +1,73 @@
+@startuml
+actor User
+participant "Main" as Main
+participant "VendingMachineContext" as VMC
+participant "Inventory" as Inv
+participant "ItemShelf" as Shelf
+participant "Item" as Item
+participant "IdleState" as Idle
+participant "HasMoneyState" as Money
+participant "SelectionState" as Selection
+participant "DispenseState" as Dispense
+
+User -> Main: Start purchase process
+Main -> VMC: Create VendingMachineContext
+VMC -> VMC: Initialize with IdleState
+VMC -> Inv: Create Inventory(10)
+Inv -> Inv: initialEmptyInventory()
+Inv --> VMC: Inventory ready
+
+Main -> VMC: fillUpInventory() via InventoryFactory
+VMC -> Inv: addItem() for each product
+Inv -> Shelf: addItem() for each slot
+Shelf --> Inv: Item added
+Inv --> VMC: Inventory updated
+
+Main -> VMC: clickOnInsertCoinButton(TEN_RUPEES)
+VMC -> VMC: Add coin to coinList
+VMC -> Idle: next()
+Idle -> VMC: Check inventory and coins
+Idle --> VMC: Transition to HasMoneyState
+VMC -> Money: Set as current state
+
+Main -> VMC: clickOnInsertCoinButton(FIVE_RUPEES)
+VMC -> VMC: Add coin to coinList
+VMC -> Money: next()
+Money -> VMC: Check inventory and coins
+Money --> VMC: Transition to SelectionState
+VMC -> Selection: Set as current state
+
+Main -> VMC: clickOnStartProductSelectionButton(102)
+VMC -> VMC: selectProduct(102)
+VMC -> Selection: next()
+Selection -> VMC: Check selection and balance
+Selection --> VMC: Transition to DispenseState
+VMC -> Dispense: Set as current state
+
+VMC -> VMC: dispenseItem(102)
+VMC -> Inv: getItem(102)
+Inv -> Shelf: getItem()
+Shelf -> Item: Get first item
+Item --> Shelf: Return item
+Shelf --> Inv: Return item
+Inv --> VMC: Return item
+
+VMC -> Inv: removeItem(102)
+Inv -> Shelf: removeItem()
+Shelf --> Inv: Item removed
+Inv --> VMC: Item removed
+
+VMC -> Inv: updateSoldOutItem(102)
+Inv -> Shelf: Update soldout status
+Shelf --> Inv: Status updated
+Inv --> VMC: Status updated
+
+VMC -> VMC: resetBalance()
+VMC -> VMC: resetSelection()
+VMC -> Dispense: next()
+Dispense --> VMC: Transition to IdleState
+VMC -> Idle: Set as current state
+
+VMC --> Main: Dispense completed
+Main --> User: Product dispensed
+@enduml

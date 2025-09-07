@@ -1,0 +1,26 @@
+@startuml
+actor User1
+actor User2
+participant "BookingService" as BS
+participant "SeatLockProvider" as SL
+participant "PaymentService" as PS
+
+User1 -> BS: createBooking(show, user1, [seat])
+BS -> SL: lockSeats(show, [seat], user1)
+SL --> BS: seats locked
+BS --> User1: booking created (B1)
+
+User2 -> BS: createBooking(show, user2, [seat])
+BS -> SL: lockSeats(show, [seat], user2)
+SL --> BS: Exception: Seat already locked
+BS --> User2: Booking failed: Seat already locked
+
+User1 -> PS: processPayment(B1, amount)
+PS -> PS: processPayment(amount)
+PS --> User1: payment successful
+PS -> BS: confirmBooking(B1)
+BS -> BS: mark booking as confirmed
+BS -> SL: unlockSeats(show, [seat], user1)
+BS --> PS: locks released
+PS --> User1: payment completed
+@enduml

@@ -1,0 +1,154 @@
+@startuml
+' Entities
+entity Card {
+  + cardNumber: String (PK)
+  --
+  pin: int
+  accountNumber: String (FK)
+  --
+  + validatePin(enteredPin: int): boolean
+}
+
+entity Account {
+  + accountNumber: String (PK)
+  --
+  balance: double
+  --
+  + withdraw(amount: double): boolean
+  + deposit(amount: void)
+  + getBalance(): double
+}
+
+entity ATMInventory {
+  + inventoryId: String (PK)
+  --
+  totalCash: int
+  --
+  + getTotalCash(): int
+  + hasSufficientCash(amount: int): boolean
+  + dispenseCash(amount: int): Map<CashType, Integer>
+}
+
+entity CashType {
+  + denomination: int (PK)
+  --
+  name: String
+  --
+  (enumeration of bill types)
+}
+
+entity TransactionType {
+  + typeId: String (PK)
+  --
+  name: String
+  --
+  (enumeration of transaction types)
+}
+
+entity ATMState {
+  + stateId: String (PK)
+  --
+  name: String
+  --
+  + getStateName(): String
+  + handleState(context: ATMMachine): void
+}
+
+entity ATMMachine {
+  + machineId: String (PK)
+  --
+  currentState: ATMState
+  currentCard: Card
+  currentAccount: Account
+  selectedOperation: TransactionType
+  --
+  + insertCard(card: Card): void
+  + authenticatePin(pin: int): void
+  + selectOperation(operation: TransactionType): void
+  + processTransaction(amount: double): void
+  + ejectCard(): void
+}
+
+' Relationships
+Card ||--o{ Account : "links to"
+ATMMachine }o--|| ATMState : "has current"
+ATMMachine }o--|| Card : "currently has"
+ATMMachine }o--|| Account : "currently accesses"
+ATMMachine }o--|| TransactionType : "selected operation"
+ATMInventory ||--o{ CashType : "contains denominations"
+
+' Notes for each entity
+note top of Card
+Represents a user's bank card with:
+- Card number (primary key)
+- PIN for authentication
+- Associated account number (foreign key)
+Functionality:
+- Validates PIN entered by user
+<b>Design Pattern:</b> Value Object
+end note
+
+note top of Account
+Represents a user's bank account with:
+- Account number (primary key)
+- Current balance
+Functionality:
+- Handles withdrawals and deposits
+- Returns current balance
+<b>Design Pattern:</b> Domain Model Entity
+end note
+
+note top of ATMInventory
+Manages the ATM's cash inventory with:
+- Inventory ID (primary key)
+- Total cash available
+Functionality:
+- Tracks available denominations
+- Dispenses cash for withdrawals
+- Checks if sufficient cash is available
+<b>Design Pattern:</b> Singleton (only one inventory per ATM)
+end note
+
+note top of CashType
+Enumeration of cash denominations:
+- Denomination value (primary key)
+- Bill name (e.g., "BILL_100")
+Represents the types of bills
+available in the ATM
+<b>Design Pattern:</b> Enum (Type-Safe Constant)
+end note
+
+note top of TransactionType
+Enumeration of transaction types:
+- Type ID (primary key)
+- Transaction name
+Represents available operations
+(Withdraw Cash, Check Balance)
+<b>Design Pattern:</b> Enum / Strategy Selector
+end note
+
+note top of ATMState
+Interface for ATM states with:
+- State ID (primary key)
+- State name
+Functionality:
+- Defines state-specific behavior
+- Handles state transitions
+Implemented by concrete states:
+IdleState, HasCardState,
+SelectOperationState, TransactionState
+<b>Design Pattern:</b> State Pattern
+end note
+
+note top of ATMMachine
+Main ATM controller with:
+- Machine ID (primary key)
+- Current state, card, account, operation
+Functionality:
+- Manages state transitions
+- Processes user interactions
+- Coordinates between components
+- Handles transaction processing
+<b>Design Pattern:</b> Context (State Pattern)
+end note
+@enduml

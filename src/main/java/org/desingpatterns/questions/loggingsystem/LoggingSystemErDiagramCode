@@ -1,0 +1,208 @@
+@startuml
+package "Logging System" {
+  enum LogLevel {
+    DEBUG
+    INFO
+    WARNING
+    ERROR
+    FATAL
+  }
+
+  note top of LogLevel
+    Enumeration for different severity levels
+    of logging messages.
+    Used across the system to categorize logs.
+  end note
+
+  class LogMessage {
+    - level: LogLevel
+    - message: String
+    - timestamp: long
+    - context: Map<String, Object>
+    + getLevel(): LogLevel
+    + getMessage(): String
+    + getTimestamp(): long
+    + getContext(): Map<String, Object>
+    + toString(): String
+  }
+
+  note top of LogMessage
+    Represents a log entry containing:
+    - Log level
+    - Log message
+    - Timestamp
+    - Optional context data
+    **Pattern Used**: Data Transfer Object (DTO)
+  end note
+
+  interface LogFormatter {
+    + format(logMessage: LogMessage): String
+  }
+
+  note top of LogFormatter
+    Defines the contract for log formatting.
+    **Pattern Used**: Strategy
+  end note
+
+  class SimpleLogFormatter {
+    + format(logMessage: LogMessage): String
+  }
+
+  note top of SimpleLogFormatter
+    Provides plain-text formatting of log messages.
+    **Pattern Used**: Strategy (Concrete Implementation)
+  end note
+
+  class JsonLogFormatter {
+    + format(logMessage: LogMessage): String
+  }
+
+  note top of JsonLogFormatter
+    Provides JSON-based formatting of log messages.
+    **Pattern Used**: Strategy (Concrete Implementation)
+  end note
+
+  interface LogAppender {
+    + append(logMessage: LogMessage): void
+  }
+
+  note top of LogAppender
+    Defines a contract for appending log messages
+    to different destinations (console, file, etc.).
+    **Pattern Used**: Strategy
+  end note
+
+  class ConsoleAppender {
+    - formatter: LogFormatter
+    + append(logMessage: LogMessage): void
+  }
+
+  note top of ConsoleAppender
+    Appends log messages to the console.
+    Uses a LogFormatter for message formatting.
+    **Pattern Used**: Strategy (Concrete Implementation)
+  end note
+
+  class FileAppender {
+    - filePath: String
+    - formatter: LogFormatter
+    + append(logMessage: LogMessage): void
+  }
+
+  note top of FileAppender
+    Appends log messages to a file at a given path.
+    Uses a LogFormatter for message formatting.
+    **Pattern Used**: Strategy (Concrete Implementation)
+  end note
+
+  abstract class LogHandler {
+    - level: LogLevel
+    - nextHandler: LogHandler
+    - appender: LogAppender
+    + setNextHandler(nextHandler: LogHandler): void
+    + handle(logMessage: LogMessage): void
+  }
+
+  note top of LogHandler
+    Abstract base class for handling log messages.
+    Supports chaining responsibility across handlers.
+    **Pattern Used**: Chain of Responsibility
+  end note
+
+  class DebugHandler
+  class InfoHandler
+  class WarningHandler
+  class ErrorHandler
+  class FatalHandler
+
+  note top of DebugHandler
+    Handles DEBUG level log messages.
+    **Pattern Used**: Chain of Responsibility (Concrete Handler)
+  end note
+
+  note top of InfoHandler
+    Handles INFO level log messages.
+    **Pattern Used**: Chain of Responsibility (Concrete Handler)
+  end note
+
+  note top of WarningHandler
+    Handles WARNING level log messages.
+    **Pattern Used**: Chain of Responsibility (Concrete Handler)
+  end note
+
+  note top of ErrorHandler
+    Handles ERROR level log messages.
+    **Pattern Used**: Chain of Responsibility (Concrete Handler)
+  end note
+
+  note top of FatalHandler
+    Handles FATAL level log messages.
+    **Pattern Used**: Chain of Responsibility (Concrete Handler)
+  end note
+
+  class LoggerConfig {
+    - logLevel: LogLevel
+    - logAppender: LogAppender
+    - logFormatter: LogFormatter
+    + getters/setters
+  }
+
+  note top of LoggerConfig
+    Holds configuration for the logger including:
+    - Log level
+    - Appender type
+    - Formatter type
+    **Pattern Used**: Configuration Object
+  end note
+
+  class Logger {
+    - config: LoggerConfig
+    - handlerChain: LogHandler
+    - buildHandlerChain(): void
+    + getInstance(config: LoggerConfig): Logger
+    + setConfig(config: LoggerConfig): void
+    + log(level: LogLevel, message: String, context: Map<String, Object>): void
+    + debug(message: String): void
+    + info(message: String): void
+    + warning(message: String): void
+    + error(message: String): void
+    + fatal(message: String): void
+  }
+
+  note top of Logger
+    Central class for managing logging.
+    Maintains handler chain and configuration.
+    Provides logging methods for different levels.
+    **Pattern Used**:
+    - Singleton (getInstance ensures single instance)
+    - Chain of Responsibility (delegates to handlers)
+  end note
+}
+
+' Relationships
+LogMessage --> LogLevel : uses
+
+LogFormatter <|.. SimpleLogFormatter : implements
+LogFormatter <|.. JsonLogFormatter : implements
+
+LogAppender <|.. ConsoleAppender : implements
+LogAppender <|.. FileAppender : implements
+
+ConsoleAppender --> LogFormatter : uses
+FileAppender --> LogFormatter : uses
+
+LogHandler <|-- DebugHandler : extends
+LogHandler <|-- InfoHandler : extends
+LogHandler <|-- WarningHandler : extends
+LogHandler <|-- ErrorHandler : extends
+LogHandler <|-- FatalHandler : extends
+
+LogHandler --> LogAppender : uses
+
+Logger --> LoggerConfig : has
+Logger --> LogHandler : has
+
+LoggerConfig --> LogLevel : uses
+LoggerConfig --> LogAppender : uses
+LoggerConfig --> LogFormatter : uses
+@enduml

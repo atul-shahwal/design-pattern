@@ -1,0 +1,83 @@
+@startuml
+actor User as user
+participant "FileSystemClient" as client
+participant "CommandFactory" as factory
+participant "CreateCommand" as createCmd
+participant "WriteCommand" as writeCmd
+participant "ReadCommand" as readCmd
+participant "DeleteCommand" as deleteCmd
+participant "FileSystem" as fs
+participant "FileSystemNode" as node
+participant "File" as file
+participant "Directory" as dir
+
+user -> client : enter command "create /documents/report.txt"
+client -> factory : createCommand("create /documents/report.txt")
+factory -> createCmd : new CreateCommand(fs, args)
+factory --> client : returns CreateCommand
+client -> createCmd : execute()
+createCmd -> fs : createPath("/documents/report.txt")
+fs -> fs : isValidFilePath("/documents/report.txt")
+fs -> fs : split path into components
+fs -> fs : traverse to parent directory
+
+alt path components don't exist
+    fs -> dir : new Directory("documents")
+    fs -> node : addChild("documents", dir)
+end
+
+fs -> file : new File("report.txt")
+fs -> node : addChild("report.txt", file)
+fs --> createCmd : returns true
+createCmd --> client : success message
+client --> user : "Path created successfully"
+
+user -> client : enter command "write /documents/report.txt 'Hello World'"
+client -> factory : createCommand("write /documents/report.txt 'Hello World'")
+factory -> writeCmd : new WriteCommand(fs, args)
+factory --> client : returns WriteCommand
+client -> writeCmd : execute()
+writeCmd -> fs : setFileContent("/documents/report.txt", "Hello World")
+fs -> fs : getNode("/documents/report.txt")
+fs --> file : returns File object
+fs -> file : setContent("Hello World")
+fs --> writeCmd : returns true
+writeCmd --> client : success message
+client --> user : "Content written successfully"
+
+user -> client : enter command "read /documents/report.txt"
+client -> factory : createCommand("read /documents/report.txt")
+factory -> readCmd : new ReadCommand(fs, args)
+factory --> client : returns ReadCommand
+client -> readCmd : execute()
+readCmd -> fs : getFileContent("/documents/report.txt")
+fs -> fs : getNode("/documents/report.txt")
+fs --> file : returns File object
+fs -> file : getContent()
+fs --> readCmd : returns "Hello World"
+readCmd --> client : returns content
+client --> user : "Content: Hello World"
+
+user -> client : enter command "delete /documents/report.txt"
+client -> factory : createCommand("delete /documents/report.txt")
+factory -> deleteCmd : new DeleteCommand(fs, args)
+factory --> client : returns DeleteCommand
+client -> deleteCmd : execute()
+deleteCmd -> fs : deletePath("/documents/report.txt")
+fs -> fs : getParentPath("/documents/report.txt")
+fs -> fs : getNode("/documents")
+fs --> dir : returns Directory object
+fs -> dir : removeChild("report.txt")
+fs --> deleteCmd : returns true
+deleteCmd --> client : success message
+client --> user : "Path deleted successfully"
+
+user -> client : enter command "display"
+client -> factory : createCommand("display")
+factory -> client : returns DisplayCommand
+client -> fs : display()
+fs -> node : display(0)
+node -> node : recursive display of all children
+fs --> client : display output
+client --> user : shows file system structure
+@enduml

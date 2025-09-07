@@ -1,0 +1,25 @@
+@startuml
+actor Player1 as white
+actor Player2 as black
+participant ChessGame
+participant Board
+participant Cell
+participant Piece
+participant MovementStrategy
+participant GameEventListener
+
+white -> ChessGame: start()
+loop While game active
+    white -> ChessGame: enter move coordinates
+    ChessGame -> Board: getCell()
+    Board --> ChessGame: return Cell
+    ChessGame -> Piece: canMove()
+    Piece -> MovementStrategy: canMove()
+    MovementStrategy --> Piece: return boolean
+    Piece --> ChessGame: return boolean
+    ChessGame -> Cell: setPiece()
+    ChessGame -> GameEventListener: onMoveMade()
+    GameEventListener --> Console: print move
+    ChessGame -> ChessGame: toggle turn
+end
+@enduml

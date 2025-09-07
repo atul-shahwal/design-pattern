@@ -1,0 +1,38 @@
+@startuml
+title Car Rental System - Reservation Sequence Diagram
+
+actor User
+participant RentalSystem
+participant ReservationManager
+participant Reservation
+participant PaymentProcessor
+participant PaymentStrategy
+
+User -> RentalSystem: createReservation(userId, vehicleReg, pickupStoreId, returnStoreId, startDate, endDate)
+RentalSystem -> ReservationManager: createReservation(user, vehicle, pickupStore, returnStore, startDate, endDate)
+ReservationManager -> Reservation: new(user, vehicle, pickupStore, returnStore, startDate, endDate)
+ReservationManager --> RentalSystem: reservation
+RentalSystem --> User: reservation
+
+User -> RentalSystem: processPayment(reservationId, paymentStrategy)
+RentalSystem -> PaymentProcessor: processPayment(amount, paymentStrategy)
+PaymentProcessor -> PaymentStrategy: processPayment(amount)
+PaymentStrategy --> PaymentProcessor: success
+PaymentProcessor --> RentalSystem: success
+RentalSystem -> ReservationManager: confirmReservation(reservationId)
+ReservationManager -> Reservation: confirmReservation()
+ReservationManager --> RentalSystem: confirmed
+RentalSystem --> User: payment successful
+
+User -> RentalSystem: startRental(reservationId)
+RentalSystem -> ReservationManager: startRental(reservationId)
+ReservationManager -> Reservation: startRental()
+ReservationManager --> RentalSystem: started
+RentalSystem --> User: rental started
+
+User -> RentalSystem: completeRental(reservationId)
+RentalSystem -> ReservationManager: completeRental(reservationId)
+ReservationManager -> Reservation: completeRental()
+ReservationManager --> RentalSystem: completed
+RentalSystem --> User: rental completed
+@enduml

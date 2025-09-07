@@ -1,0 +1,287 @@
+@startuml
+' Chess Game Entity Relationship Diagram
+' Design Patterns: Singleton, Factory, Strategy, Observer
+
+class Board {
+  - instance: Board
+  - board: Cell[][]
+  - size: int
+  + getInstance(size: int): Board
+  + getCell(row: int, col: int): Cell
+  + getSize(): int
+  + display(): void
+}
+note top of Board
+SINGLETON PATTERN
+Ensures only one board instance exists
+Manages the 8x8 grid of cells
+Handles piece placement and retrieval
+end note
+
+class Cell {
+  - row: int
+  - col: int
+  - piece: Piece
+  + getRow(): int
+  + getCol(): int
+  + getPiece(): Piece
+  + setPiece(piece: Piece): void
+}
+note top of Cell
+Represents a single square on the board
+Stores position and reference to piece
+Basic building block of the game board
+end note
+
+abstract class Piece {
+  - isWhitePiece: boolean
+  - killed: boolean
+  - movementStrategy: MovementStrategy
+  + isWhite(): boolean
+  + isKilled(): boolean
+  + setKilled(killed: boolean): void
+  + canMove(board: Board, start: Cell, end: Cell): boolean
+}
+note top of Piece
+STRATEGY PATTERN
+Base class for all chess pieces
+Uses composition with MovementStrategy
+Defines common piece properties and behavior
+end note
+
+class King {
+  + King(isWhite: boolean)
+}
+note top of King
+Represents the King piece
+Most important piece in the game
+Game ends when king is captured
+end note
+
+class Queen {
+  + Queen(isWhite: boolean)
+}
+note top of Queen
+Represents the Queen piece
+Most powerful piece in the game
+Can move any number of squares in any direction
+end note
+
+class Bishop {
+  + Bishop(isWhite: boolean)
+}
+note top of Bishop
+Represents the Bishop piece
+Moves diagonally any number of squares
+Each player starts with two bishops
+end note
+
+class Knight {
+  + Knight(isWhite: boolean)
+}
+note top of Knight
+Represents the Knight piece
+Moves in L-shape (2 squares in one direction, 1 perpendicular)
+Only piece that can jump over other pieces
+end note
+
+class Rook {
+  + Rook(isWhite: boolean)
+}
+note top of Rook
+Represents the Rook piece
+Moves horizontally or vertically any number of squares
+Participates in castling move with king
+end note
+
+class Pawn {
+  + Pawn(isWhite: boolean)
+}
+note top of Pawn
+Represents the Pawn piece
+Moves forward one square, captures diagonally
+Can promote to any other piece when reaching opposite side
+end note
+
+class PieceFactory {
+  + createPiece(type: String, isWhite: boolean): Piece
+}
+note top of PieceFactory
+FACTORY PATTERN
+Creates appropriate piece instances
+Centralizes piece creation logic
+Makes it easy to add new piece types
+end note
+
+interface MovementStrategy {
+  + canMove(board: Board, start: Cell, end: Cell): boolean
+}
+note top of MovementStrategy
+STRATEGY PATTERN INTERFACE
+Defines contract for movement algorithms
+Allows different movement behaviors for each piece type
+end note
+
+class KingMovementStrategy {
+  + canMove(board: Board, start: Cell, end: Cell): boolean
+}
+note top of KingMovementStrategy
+Implements king movement rules
+King can move one square in any direction
+Includes check for castling
+end note
+
+class QueenMovementStrategy {
+  + canMove(board: Board, start: Cell, end: Cell): boolean
+}
+note top of QueenMovementStrategy
+Implements queen movement rules
+Queen can move any number of squares in any direction
+Combines rook and bishop movement
+end note
+
+class RookMovementStrategy {
+  + canMove(board: Board, start: Cell, end: Cell): boolean
+}
+note top of RookMovementStrategy
+Implements rook movement rules
+Rook can move any number of squares horizontally or vertically
+Includes check for castling
+end note
+
+class BishopMovementStrategy {
+  + canMove(board: Board, start: Cell, end: Cell): boolean
+}
+note top of BishopMovementStrategy
+Implements bishop movement rules
+Bishop can move any number of squares diagonally
+Cannot change color of square it's on
+end note
+
+class KnightMovementStrategy {
+  + canMove(board: Board, start: Cell, end: Cell): boolean
+}
+note top of KnightMovementStrategy
+Implements knight movement rules
+Knight moves in L-shape (2+1 squares)
+Only piece that can jump over others
+end note
+
+class PawnMovementStrategy {
+  + canMove(board: Board, start: Cell, end: Cell): boolean
+}
+note top of PawnMovementStrategy
+Implements pawn movement rules
+Moves forward one square, captures diagonally
+Includes special moves: en passant, promotion, initial two-square move
+end note
+
+class Move {
+  - startCell: Cell
+  - endCell: Cell
+  + isValid(): boolean
+  + getStartCell(): Cell
+  + getEndCell(): Cell
+}
+note top of Move
+Represents a move in the game
+Contains start and end cells
+Validates basic move legality (not capturing own pieces)
+end note
+
+class Player {
+  - name: String
+  - isWhiteSide: boolean
+  + getName(): String
+  + isWhiteSide(): boolean
+}
+note top of Player
+Represents a chess player
+Stores player name and color (white/black)
+Manages player-specific information
+end note
+
+class ChessGame {
+  - board: Board
+  - player1: Player
+  - player2: Player
+  - isWhiteTurn: boolean
+  - gameLog: List<Move>
+  - status: Status
+  - listener: GameEventListener
+  + setObserver(listener: GameEventListener): void
+  + start(): void
+  - makeMove(move: Move): void
+}
+note top of ChessGame
+Main game controller class
+Manages game state and turn order
+Handles move validation and execution
+Maintains game log for replay/undo functionality
+end note
+
+interface GameEventListener {
+  + onMoveMade(move: Move): void
+  + onGameStateChanged(state: Status): void
+}
+note top of GameEventListener
+OBSERVER PATTERN INTERFACE
+Defines contract for game event listeners
+Allows decoupling of game logic from UI/notification systems
+end note
+
+class ConsoleGameEventListener {
+  + onMoveMade(move: Move): void
+  + onGameStateChanged(state: Status): void
+}
+note top of ConsoleGameEventListener
+OBSERVER PATTERN IMPLEMENTATION
+Concrete implementation of GameEventListener
+Outputs game events to console
+Can be replaced with other implementations (e.g., GUI)
+end note
+
+enum Status {
+  ACTIVE
+  SAVED
+  BLACK_WIN
+  WHITE_WIN
+  STALEMATE
+}
+note top of Status
+Represents possible game states
+Tracks whether game is active, completed, or saved
+Determines when game should end
+end note
+
+' Inheritance relationships
+Piece <|-- King
+Piece <|-- Queen
+Piece <|-- Bishop
+Piece <|-- Knight
+Piece <|-- Rook
+Piece <|-- Pawn
+
+' Strategy pattern relationships
+MovementStrategy <|.. KingMovementStrategy
+MovementStrategy <|.. QueenMovementStrategy
+MovementStrategy <|.. RookMovementStrategy
+MovementStrategy <|.. BishopMovementStrategy
+MovementStrategy <|.. KnightMovementStrategy
+MovementStrategy <|.. PawnMovementStrategy
+
+' Composition relationships
+Piece o-- MovementStrategy
+Board o-- Cell
+Cell o-- Piece
+ChessGame o-- Board
+ChessGame o-- Player
+ChessGame o-- Move
+ChessGame --> GameEventListener
+
+' Factory pattern relationship
+PieceFactory ..> Piece
+
+' Additional relationships
+ChessGame --> Status
+@enduml

@@ -1,0 +1,107 @@
+@startuml
+title Sequence Diagram – All Test Case Scenarios for NoSQLDatabase
+
+actor Tester
+participant NoSQLDatabase
+participant InMemoryDocumentStorage
+participant SimplePersistentStorage
+participant SimpleReplicationStrategy
+participant KeyBasedLocking
+participant Replica1
+participant Replica2
+participant ConsistentHashingSharding
+participant InMemoryDocumentStorage_shard1
+participant InMemoryDocumentStorage_shard2
+participant InMemoryDocumentStorage_shard3
+
+== Test 1: Basic CRUD Operations ==
+Tester -> NoSQLDatabase : put("user:1", userDocument)
+NoSQLDatabase -> InMemoryDocumentStorage : put("user:1", userDocument)
+InMemoryDocumentStorage -> KeyBasedLocking : withWriteLock("user:1")
+KeyBasedLocking --> InMemoryDocumentStorage : lock acquired
+InMemoryDocumentStorage -> InMemoryDocumentStorage : updateIndexes()
+KeyBasedLocking --> InMemoryDocumentStorage : lock released
+InMemoryDocumentStorage --> NoSQLDatabase : put completed
+NoSQLDatabase -> SimplePersistentStorage : persist("user:1", userDocument)
+NoSQLDatabase -> SimpleReplicationStrategy : replicate("user:1", userDocument)
+
+Tester -> NoSQLDatabase : get("user:1")
+NoSQLDatabase -> InMemoryDocumentStorage : get("user:1")
+InMemoryDocumentStorage -> KeyBasedLocking : withReadLock("user:1")
+KeyBasedLocking --> InMemoryDocumentStorage : lock acquired
+InMemoryDocumentStorage -> InMemoryDocumentStorage : retrieve document
+KeyBasedLocking --> InMemoryDocumentStorage : lock released
+InMemoryDocumentStorage --> NoSQLDatabase : document returned
+Tester --> Tester : verify data
+
+== Test 2: Query Operations ==
+Tester -> NoSQLDatabase : put("user:2", user2)
+Tester -> NoSQLDatabase : put("user:3", user3)
+NoSQLDatabase -> InMemoryDocumentStorage : put("user:2", user2)
+NoSQLDatabase -> InMemoryDocumentStorage : put("user:3", user3)
+Tester -> InMemoryDocumentStorage : createIndex("city")
+Tester -> NoSQLDatabase : query("city", "New York")
+NoSQLDatabase -> InMemoryDocumentStorage : query("city", "New York")
+InMemoryDocumentStorage -> InMemoryDocumentStorage : search index
+InMemoryDocumentStorage -> KeyBasedLocking : withReadLock(...)
+KeyBasedLocking --> InMemoryDocumentStorage : lock acquired
+InMemoryDocumentStorage -> InMemoryDocumentStorage : retrieve matching documents
+KeyBasedLocking --> InMemoryDocumentStorage : lock released
+InMemoryDocumentStorage --> NoSQLDatabase : return query result
+NoSQLDatabase --> Tester : return result
+
+== Test 3: Concurrency Test ==
+Tester -> NoSQLDatabase : multiple threads perform put/get concurrently
+par Thread 1
+    NoSQLDatabase -> InMemoryDocumentStorage : put("key1", doc1)
+    InMemoryDocumentStorage -> KeyBasedLocking : withWriteLock("key1")
+    KeyBasedLocking --> InMemoryDocumentStorage : lock acquired
+    InMemoryDocumentStorage -> InMemoryDocumentStorage : updateIndexes()
+    KeyBasedLocking --> InMemoryDocumentStorage : lock released
+    InMemoryDocumentStorage --> NoSQLDatabase : put completed
+    NoSQLDatabase -> SimplePersistentStorage : persist("key1", doc1)
+    NoSQLDatabase -> SimpleReplicationStrategy : replicate("key1", doc1)
+end
+par Thread 2
+    NoSQLDatabase -> InMemoryDocumentStorage : get("key1")
+    InMemoryDocumentStorage -> KeyBasedLocking : withReadLock("key1")
+    KeyBasedLocking --> InMemoryDocumentStorage : lock acquired
+    InMemoryDocumentStorage -> InMemoryDocumentStorage : retrieve document
+    KeyBasedLocking --> InMemoryDocumentStorage : lock released
+    InMemoryDocumentStorage --> NoSQLDatabase : get completed
+end
+
+== Test 4: Sharding Test ==
+Tester -> ConsistentHashingSharding : addShard("shard1", ...)
+Tester -> ConsistentHashingSharding : addShard("shard2", ...)
+Tester -> ConsistentHashingSharding : addShard("shard3", ...)
+Tester -> NoSQLDatabase : put("shardtest:1", doc1)
+NoSQLDatabase -> ConsistentHashingSharding : getShardId("shardtest:1")
+ConsistentHashingSharding --> NoSQLDatabase : "shard1"
+NoSQLDatabase -> InMemoryDocumentStorage_shard1 : put("shardtest:1", doc1)
+Tester --> Tester : verify distribution
+
+== Test 5: Replication Test ==
+Tester -> SimpleReplicationStrategy : addReplica(Replica1)
+Tester -> SimpleReplicationStrategy : addReplica(Replica2)
+Tester -> NoSQLDatabase : put("replica_test", testDoc)
+NoSQLDatabase -> InMemoryDocumentStorage : put("replica_test", testDoc)
+InMemoryDocumentStorage -> KeyBasedLocking : withWriteLock("replica_test")
+KeyBasedLocking --> InMemoryDocumentStorage : lock acquired
+InMemoryDocumentStorage -> InMemoryDocumentStorage : updateIndexes()
+KeyBasedLocking --> InMemoryDocumentStorage : lock released
+NoSQLDatabase -> SimplePersistentStorage : persist("replica_test", testDoc)
+NoSQLDatabase -> SimpleReplicationStrategy : replicate("replica_test", testDoc)
+SimpleReplicationStrategy -> Replica1 : put("replica_test", testDoc)
+SimpleReplicationStrategy -> Replica2 : put("replica_test", testDoc)
+
+== Test 6: Error Handling ==
+Tester -> NoSQLDatabase : get("non_existent_key")
+NoSQLDatabase -> InMemoryDocumentStorage : get("non_existent_key")
+InMemoryDocumentStorage -> KeyBasedLocking : withReadLock("non_existent_key")
+KeyBasedLocking --> InMemoryDocumentStorage : lock acquired
+InMemoryDocumentStorage -> InMemoryDocumentStorage : retrieve null
+KeyBasedLocking --> InMemoryDocumentStorage : lock released
+InMemoryDocumentStorage --> NoSQLDatabase : return null
+NoSQLDatabase --> Tester : handle error gracefully
+@enduml

@@ -1,0 +1,35 @@
+@startuml
+actor User
+
+participant "ATMMachine" as atm
+participant "Card" as card
+participant "Account" as account
+participant "ATMState" as state
+participant "ATMInventory" as inventory
+participant "TransactionType" as txn
+
+User -> atm: insertCard(card)
+atm -> state: handleState(atm)
+atm -> card: validatePin(pin)
+card -> account: validatePin(enteredPin)
+
+User -> atm: selectOperation(Withdraw)
+atm -> txn: set operation
+
+User -> atm: processTransaction(amount)
+atm -> account: withdraw(amount)
+account --> atm: success/failure
+
+alt sufficient balance AND ATM has cash
+    atm -> inventory: hasSufficientCash(amount)
+    inventory --> atm: true
+    atm -> inventory: dispenseCash(amount)
+    inventory --> atm: cash dispensed
+    atm -> User: dispense cash
+else insufficient balance/cash
+    atm -> User: show error message
+end
+
+atm -> atm: ejectCard()
+atm -> User: return card
+@enduml

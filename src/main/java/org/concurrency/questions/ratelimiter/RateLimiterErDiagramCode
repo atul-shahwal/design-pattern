@@ -1,0 +1,90 @@
+@startuml
+!theme plain
+title Rate Limiter - Class/ER Diagram
+
+'----------------------
+' Interfaces
+'----------------------
+interface IRateLimiter {
+    + giveAccess(key: String): boolean
+    + updateConfiguration(config: Map<String, Object>)
+    + shutdown()
+}
+note right of IRateLimiter
+  Strategy Pattern: Defines interface for all rate limiting algorithms
+  Supports interchangeable implementations (Token Bucket, Fixed Window, etc.)
+end note
+
+'----------------------
+' Enums
+'----------------------
+enum RateLimiterType {
+    TOKEN_BUCKET
+    FIXED_WINDOW
+    SLIDING_WINDOW
+    LEAKY_BUCKET
+}
+note right of RateLimiterType
+  Type Object Pattern: Enumerates supported rate limiting strategies
+end note
+
+'----------------------
+' Concrete Implementations
+'----------------------
+class TokenBucketStrategy {
+    - bucketCapacity: int
+    - refreshRate: int
+    - globalBucket: Bucket
+    - userBuckets: ConcurrentHashMap<String, Bucket>
+    - scheduler: ScheduledExecutorService
+    - refillIntervalMillis: long
+    + giveAccess(key: String): boolean
+    + updateConfiguration(config: Map<String,Object>)
+    + shutdown()
+}
+note right of TokenBucketStrategy
+  Implements Token Bucket algorithm (global & per-user)
+  Strategy Pattern implementation
+end note
+
+class Bucket {
+    - tokens: int
+    - lock: ReentrantLock
+    + tryConsume(): boolean
+    + refill(): void
+}
+note right of Bucket
+  Thread-safe token container using ReentrantLock
+  Encapsulates token consumption and refill
+end note
+
+class RateLimiterFactory {
+    - limiterFactories: Map<RateLimiterType, Function<Map<String,Object>, IRateLimiter>>
+    + createLimiter(type: RateLimiterType, config: Map<String,Object>): IRateLimiter
+    + registerLimiterFactory(type, factory)
+}
+note right of RateLimiterFactory
+  Factory Pattern: Creates instances of IRateLimiter
+  Centralizes object creation
+end note
+
+class RateLimiterController {
+    - rateLimiter: IRateLimiter
+    - executor: ExecutorService
+    + processRequest(key: String): CompletableFuture<Boolean>
+    + updateConfiguration(config: Map<String,Object>)
+    + shutdown()
+}
+note right of RateLimiterController
+  Facade Pattern: Simplifies client interaction with rate limiter
+  Uses ExecutorService for async request handling
+end note
+
+'----------------------
+' Relationships
+'----------------------
+IRateLimiter <|.. TokenBucketStrategy
+TokenBucketStrategy *-- Bucket : "has a"
+RateLimiterController o-- IRateLimiter : "uses"
+RateLimiterController o-- RateLimiterFactory : "uses"
+@enduml

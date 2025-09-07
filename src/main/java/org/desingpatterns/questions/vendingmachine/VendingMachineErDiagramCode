@@ -1,0 +1,222 @@
+@startuml
+' Enums
+enum ItemType {
+  COKE
+  PEPSI
+  JUICE
+  SODA
+}
+
+note right of ItemType
+  Represents different types of products
+  available in the vending machine.
+  Easily extensible for new product types.
+end note
+
+enum Coin {
+  ONE_RUPEE
+  TWO_RUPEES
+  FIVE_RUPEES
+  TEN_RUPEES
+}
+
+note right of Coin
+  Represents different coin denominations
+  accepted by the vending machine.
+  Values represent monetary worth in rupees.
+end note
+
+' Classes
+class Item {
+  - type: ItemType
+  - price: int
+  + getType(): ItemType
+  + setType(type: ItemType): void
+  + getPrice(): int
+  + setPrice(price: int): void
+}
+
+note top of Item
+  Represents a product in the vending machine.
+  Contains product type and price information.
+  Each item has a specific type and fixed price.
+end note
+
+class ItemShelf {
+  - code: int
+  - items: List<Item>
+  - isSoldOut: boolean
+  + getCode(): int
+  + getItems(): List<Item>
+  + checkIsSoldOut(): boolean
+  + setIsSoldOut(isSoldOut: boolean): void
+  + addItem(item: Item): void
+  + removeItem(item: Item): void
+  + hasItems(): boolean
+}
+
+note top of ItemShelf
+  Represents a physical shelf in the vending machine.
+  Each shelf has a unique code and holds multiple items.
+  Tracks whether the shelf is sold out.
+  Manages addition and removal of items.
+end note
+
+class Inventory {
+  - inventory: ItemShelf[]
+  + getInventory(): ItemShelf[]
+  + initialEmptyInventory(): void
+  + addItem(item: Item, codeNumber: int): void
+  + getItem(codeNumber: int): Item
+  + updateSoldOutItem(codeNumber: int): void
+  + removeItem(codeNumber: int): void
+  + hasItems(): boolean
+}
+
+note top of Inventory
+  Manages all item shelves in the vending machine.
+  Provides inventory operations like adding, removing,
+  and checking items.
+  Handles inventory initialization and sold-out status.
+end note
+
+class InventoryFactory {
+  + initializeDefaultInventory(vendingMachine: VendingMachineContext): void
+}
+
+note top of InventoryFactory
+  **Design Pattern: Factory Method**
+  Factory class responsible for initializing
+  the vending machine with default products.
+  Encapsulates inventory setup logic away from client code.
+end note
+
+class InventoryDisplay {
+  + displayInventory(vendingMachine: VendingMachineContext): void
+}
+
+note top of InventoryDisplay
+  **Design Pattern: Strategy/Utility**
+  Utility class for displaying current inventory status.
+  Shows product details and availability for each shelf.
+end note
+
+' State Pattern Interfaces and Classes
+interface VendingMachineState {
+  + getStateName(): String
+  + next(context: VendingMachineContext): VendingMachineState
+}
+
+note top of VendingMachineState
+  **Design Pattern: State**
+  State pattern interface defining common methods
+  for all vending machine states.
+  Each state determines the next valid state transition.
+end note
+
+class IdleState {
+  + getStateName(): String
+  + next(context: VendingMachineContext): VendingMachineState
+}
+
+note top of IdleState
+  **Design Pattern: State (Concrete State)**
+  Initial state when the machine is ready for interaction.
+  Transitions to HasMoneyState when coins are inserted
+  or OutOfStockState if inventory is empty.
+end note
+
+class HasMoneyState {
+  + getStateName(): String
+  + next(context: VendingMachineContext): VendingMachineState
+}
+
+note top of HasMoneyState
+  **Design Pattern: State (Concrete State)**
+  State when money has been inserted but no product
+  has been selected yet.
+  Allows product selection or cancellation.
+end note
+
+class SelectionState {
+  + getStateName(): String
+  + next(context: VendingMachineContext): VendingMachineState
+}
+
+note top of SelectionState
+  **Design Pattern: State (Concrete State)**
+  State when a product has been selected.
+  Validates if sufficient money has been inserted.
+  Transitions to DispenseState if validation passes.
+end note
+
+class DispenseState {
+  + getStateName(): String
+  + next(context: VendingMachineContext): VendingMachineState
+}
+
+note top of DispenseState
+  **Design Pattern: State (Concrete State)**
+  State responsible for dispensing the selected product.
+  Updates inventory and returns change if applicable.
+  Always transitions back to IdleState after dispensing.
+end note
+
+class OutOfStockState {
+  + getStateName(): String
+  + next(context: VendingMachineContext): VendingMachineState
+}
+
+note top of OutOfStockState
+  **Design Pattern: State (Concrete State)**
+  State when the vending machine has no products available.
+  Prevents further interactions until restocked.
+  Transitions to IdleState when inventory is replenished.
+end note
+
+class VendingMachineContext {
+  - currentState: VendingMachineState
+  - inventory: Inventory
+  - coinList: List<Coin>
+  - selectedItemCode: int
+  + getCurrentState(): VendingMachineState
+  + advanceState(): void
+  + clickOnInsertCoinButton(coin: Coin): void
+  + clickOnStartProductSelectionButton(codeNumber: int): void
+  + selectProduct(codeNumber: int): void
+  + dispenseItem(codeNumber: int): void
+  + updateInventory(item: Item, codeNumber: int): void
+  + getInventory(): Inventory
+  + getCoinList(): List<Coin>
+  + getSelectedItemCode(): int
+  + setSelectedItemCode(codeNumber: int): void
+  + resetSelection(): void
+  + getBalance(): int
+  + resetBalance(): void
+}
+
+note top of VendingMachineContext
+  **Design Pattern: State (Context)**
+  Main controller class that manages the vending machine operations.
+  Maintains current state, inventory, and payment information.
+  Handles state transitions and coordinates between components.
+  Implements the State pattern for behavior management.
+end note
+
+' Relationships
+Item "1" -- "1" ItemType
+ItemShelf "1" -- "*" Item
+Inventory "1" -- "*" ItemShelf
+VendingMachineContext "1" -- "1" Inventory
+VendingMachineContext "1" -- "*" Coin
+VendingMachineContext "1" -- "1" VendingMachineState
+
+InventoryFactory ..> VendingMachineContext : uses
+InventoryDisplay ..> VendingMachineContext : uses
+
+IdleState ..|> VendingMachineState
+HasMoneyState ..|> VendingMachineState
+SelectionState ..|> VendingMachineState
+DispenseState ..|> VendingMachineState
+OutOfStockState ..|> VendingMachineState
+@enduml

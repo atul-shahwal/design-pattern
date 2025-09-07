@@ -1,0 +1,45 @@
+@startuml
+actor "Human Player" as player
+participant "TicTacToeGame" as game
+participant "Board" as board
+participant "Player" as p
+participant "HumanPlayerStrategy" as strategy
+participant "GameContext" as context
+participant "XWonState" as xstate
+participant "OWonState" as ostate
+
+activate game
+
+loop until game over
+    game -> p: getPlayerStrategy()
+    p --> strategy: return
+    game -> strategy: makeMove(board)
+    activate strategy
+    strategy -> player: request input
+    player --> strategy: provide position
+    strategy -> board: isValidMove(position)
+    board --> strategy: return validation
+    strategy --> game: return position
+    deactivate strategy
+
+    game -> board: makeMove(position, symbol)
+    activate board
+    board -> board: update grid
+    board -> board: checkGameState(context)
+
+    alt Win detected
+        board -> context: next(player, true)
+        activate context
+        context -> xstate: setState() or ostate: setState()
+        deactivate context
+    else Draw detected
+        board -> context: next(player, false)
+    end
+    deactivate board
+
+    game -> game: switchPlayer()
+end
+
+game -> game: announceResult()
+game -> player: display result
+@enduml

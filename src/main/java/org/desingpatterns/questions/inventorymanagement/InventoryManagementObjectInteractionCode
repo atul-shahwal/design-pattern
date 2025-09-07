@@ -1,0 +1,40 @@
+@startuml Inventory Management Sequence Diagram
+
+actor User
+participant "InventoryManager\n(Singleton)" as IM
+participant "ProductFactory" as PF
+participant "Warehouse" as WH
+participant "InventoryObserver" as IO
+participant "ReplenishmentStrategy" as RS
+
+User -> IM: getInstance()
+IM -> IM: Create instance (if needed)
+
+User -> IM: createProduct(category, sku, name, price, quantity, threshold)
+IM -> PF: createProduct(category, sku, name, price, quantity, threshold)
+PF --> IM: Product
+
+User -> IM: addProductToWarehouse(product, warehouse, quantity)
+IM -> WH: addProduct(product, quantity)
+WH -> Product: addStock(quantity)
+
+User -> IM: checkStockLevels()
+IM -> WH: getProducts()
+WH --> IM: List<Product>
+
+loop for each Product
+    IM -> Product: getQuantity()
+    IM -> Product: getThreshold()
+
+    alt Quantity < Threshold
+        IM -> IO: update(product)
+        IM -> RS: replenish(product)
+    end
+end
+
+User -> IM: generateInventoryReport()
+IM -> WH: getProducts()
+WH --> IM: List<Product>
+IM -> User: Display report
+
+@enduml

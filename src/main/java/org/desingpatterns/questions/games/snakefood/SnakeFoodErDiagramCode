@@ -1,0 +1,140 @@
+@startuml
+entity "Pair" as pair {
+  + row: int
+  + col: int
+  --
+  + getRow(): int
+  + getCol(): int
+  + equals(Object): boolean
+  + hashCode(): int
+}
+
+entity "GameBoard" as board {
+  - width: int
+  - height: int
+  - instance: GameBoard
+  --
+  + getInstance(width, height): GameBoard
+  + getWidth(): int
+  + getHeight(): int
+}
+
+note right of board
+Singleton Pattern
+- Ensures single instance
+- Global access to board dimensions
+end note
+
+interface "MovementStrategy" as strategy {
+  + getNextPosition(Pair, String): Pair
+}
+
+entity "HumanMovementStrategy" as humanStrategy {
+  + getNextPosition(Pair, String): Pair
+}
+
+note right of strategy
+Strategy Pattern
+- Encapsulates movement algorithms
+- Interchangeable behaviors
+end note
+
+abstract "FoodItem" as food {
+  # row: int
+  # col: int
+  # points: int
+  --
+  + getRow(): int
+  + getCol(): int
+  + getPoints(): int
+}
+
+entity "NormalFood" as normalFood {
+  + NormalFood(row, col)
+}
+
+entity "BonusFood" as bonusFood {
+  + BonusFood(row, col)
+}
+
+entity "FoodFactory" as factory {
+  + createFood(int[], String): FoodItem
+}
+
+note right of factory
+Factory Pattern
+- Centralized object creation
+- Extensible for new food types
+end note
+
+interface "GameObserver" as observer {
+  + onMoveMade(Pair)
+  + onFoodEaten(int, int)
+  + onGameOver(int)
+}
+
+entity "ConsoleGameObserver" as consoleObserver {
+  + onMoveMade(Pair)
+  + onFoodEaten(int, int)
+  + onGameOver(int)
+}
+
+note right of observer
+Observer Pattern
+- Loose coupling for notifications
+- Multiple observer support
+end note
+
+entity "SnakeGame" as game {
+  - board: GameBoard
+  - snake: Deque<Pair>
+  - snakeMap: Map<Pair, Boolean>
+  - food: int[][]
+  - foodIndex: int
+  - movementStrategy: MovementStrategy
+  - observers: List<GameObserver>
+  - hasWalls: boolean
+  --
+  + move(String): int
+  + setMovementStrategy(MovementStrategy)
+  + addObserver(GameObserver)
+}
+
+note right of game
+Facade Pattern
+- Coordinates all components
+- Simplified interface to complex system
+end note
+
+entity "SnakeGameMain" as main {
+  + main(String[])
+}
+
+' Relationships
+board *-- game : has
+strategy ..> game : uses
+humanStrategy ..|> strategy : implements
+factory --> food : creates
+normalFood --|> food : extends
+bonusFood --|> food : extends
+observer ..> game : notifies
+consoleObserver ..|> observer : implements
+game o-- pair : contains
+
+' Additional notes
+note top of pair
+Value Object Pattern
+- Immutable coordinate object
+- Safe for sharing between components
+end note
+
+note as designNote
+Design Patterns Summary:
+1. Singleton: GameBoard ensures single instance
+2. Strategy: Movement algorithms are interchangeable
+3. Factory: Centralized food creation
+4. Observer: Event notification system
+5. Value Object: Immutable Pair class
+6. Facade: SnakeGame coordinates all components
+end note
+@enduml

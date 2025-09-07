@@ -1,0 +1,37 @@
+@startuml
+title Web Crawler Sequence Diagram
+
+actor User
+participant Main
+participant WebCrawler
+participant "ThreadPool" as TP
+participant CrawlTask
+participant HtmlParser
+
+User -> Main: Start program
+Main -> WebCrawler: crawl(startUrl, htmlParser)
+WebCrawler -> WebCrawler: extractHostname(startUrl)
+WebCrawler -> WebCrawler: Mark startUrl as visited
+WebCrawler -> TP: submit(new CrawlTask(startUrl))
+
+loop While pendingTasks > 0
+  WebCrawler -> WebCrawler: sleep(50ms)
+end
+
+TP -> CrawlTask: run()
+CrawlTask -> HtmlParser: getUrls(url)
+HtmlParser --> CrawlTask: List of URLs
+
+loop For each URL
+  CrawlTask -> CrawlTask: extractHostname(url)
+  alt Same hostname AND not visited
+    CrawlTask -> WebCrawler: Mark URL as visited
+    CrawlTask -> TP: submit(new CrawlTask(url))
+  end
+end
+
+CrawlTask -> WebCrawler: Decrement pendingTasks
+
+WebCrawler --> Main: List of visited URLs
+Main -> User: Display results
+@enduml

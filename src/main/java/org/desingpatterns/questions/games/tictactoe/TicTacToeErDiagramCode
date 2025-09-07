@@ -1,0 +1,150 @@
+@startuml Tic Tac Toe Game ER Diagram
+title Tic Tac Toe Game Entity Relationship Diagram
+
+'=== ENUMS ===
+enum Symbol {
+    X
+    O
+    EMPTY
+}
+
+'=== CLASSES ===
+class Position {
+    - row: int
+    - col: int
+    + toString(): String
+    + equals(obj: Object): boolean
+    + hashCode(): int
+}
+note right: Represents board coordinates\nUsed for move positions
+
+interface PlayerStrategy {
+    + makeMove(board: Board): Position
+}
+note right: Strategy pattern for player moves\nAllows different implementations (human, AI)
+
+class HumanPlayerStrategy {
+    - scanner: Scanner
+    - playerName: String
+    + makeMove(board: Board): Position
+}
+note right: Handles human player input\nValidates moves through the board
+
+interface GameState {
+    + next(context: GameContext, player: Player, hasWon: boolean)
+    + isGameOver(): boolean
+}
+note right: State pattern interface\nDefines game flow transitions
+
+class XTurnState {
+    + next(context: GameContext, player: Player, hasWon: boolean)
+    + isGameOver(): boolean
+}
+note right: State when it's X player's turn\nTransitions to O's turn or win state
+
+class OTurnState {
+    + next(context: GameContext, player: Player, hasWon: boolean)
+    + isGameOver(): boolean
+}
+note right: State when it's O player's turn\nTransitions to X's turn or win state
+
+class XWonState {
+    + next(context: GameContext, player: Player, hasWon: boolean)
+    + isGameOver(): boolean
+}
+note right: Terminal state when X wins the game
+
+class OWonState {
+    + next(context: GameContext, player: Player, hasWon: boolean)
+    + isGameOver(): boolean
+}
+note right: Terminal state when O wins the game
+
+class DrawState {
+    + next(context: GameContext, player: Player, hasWon: boolean)
+    + isGameOver(): boolean
+}
+note right: Terminal state when game ends in a draw
+
+class GameContext {
+    - currentState: GameState
+    + setState(state: GameState)
+    + next(player: Player, hasWon: boolean)
+    + isGameOver(): boolean
+}
+note right: Manages game state transitions\nContext for the State pattern
+
+class Player {
+    - symbol: Symbol
+    - playerStrategy: PlayerStrategy
+    + getSymbol(): Symbol
+    + getPlayerStrategy(): PlayerStrategy
+}
+note right: Represents a player with a symbol and strategy
+
+class Board {
+    - rows: int
+    - columns: int
+    - grid: Symbol[][]
+    - listeners: List<GameEventListener>
+    + isValidMove(pos: Position): boolean
+    + makeMove(pos: Position, symbol: Symbol)
+    + checkGameState(context: GameContext, currentPlayer: Player)
+    + printBoard()
+    + addListener(listener: GameEventListener)
+}
+note right: Manages the game board state\nValidates moves and checks win conditions
+
+interface GameEventListener {
+    + onMoveMade(position: Position, symbol: Symbol)
+    + onGameStateChanged(state: GameState)
+}
+note right: Observer pattern interface\nNotifies about game events
+
+class ConsoleGameEventListener {
+    + onMoveMade(position: Position, symbol: Symbol)
+    + onGameStateChanged(state: GameState)
+}
+note right: Concrete listener that outputs events to console
+
+class TicTacToeGame {
+    - board: Board
+    - playerX: Player
+    - playerO: Player
+    - currentPlayer: Player
+    - gameContext: GameContext
+    + play()
+    - switchPlayer()
+    - announceResult()
+}
+note right: Main game controller\nOrchestrates gameplay flow
+
+'=== RELATIONSHIPS ===
+PlayerStrategy <|.. HumanPlayerStrategy
+GameState <|.. XTurnState
+GameState <|.. OTurnState
+GameState <|.. XWonState
+GameState <|.. OWonState
+GameState <|.. DrawState
+GameEventListener <|.. ConsoleGameEventListener
+
+TicTacToeGame "1" *-- "1" Board
+TicTacToeGame "1" *-- "2" Player
+TicTacToeGame "1" *-- "1" GameContext
+
+Player "1" *-- "1" PlayerStrategy
+Player "1" *-- "1" Symbol
+
+Board "1" *-- "many" GameEventListener
+Board "1" *-- "2D" Symbol
+
+GameContext "1" *-- "1" GameState
+
+TicTacToeGame ..> Position : creates
+PlayerStrategy ..> Board : uses
+PlayerStrategy ..> Position : returns
+Board ..> Position : uses
+Board ..> GameContext : uses
+Board ..> GameEventListener : notifies
+
+@enduml

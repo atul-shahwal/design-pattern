@@ -1,0 +1,95 @@
+@startuml
+title Elevator System - Object Interaction Diagram
+
+actor User
+participant "ElevatorSystem" as ES
+participant "ElevatorController" as EC
+participant "SchedulingStrategy" as SS
+participant "Elevator" as E
+participant "ElevatorDisplay" as ED
+participant "ElevatorRequest" as ER
+
+User -> ES: requestElevator(floor, direction)
+activate ES
+ES -> EC: requestElevator(floor, direction)
+activate EC
+
+EC -> EC: findBestElevator(floor, direction)
+EC -> E: addRequest(new ElevatorRequest())
+activate E
+
+E -> E: processRequest()
+E -> SS: getNextStop(elevator)
+activate SS
+SS --> E: nextStop
+deactivate SS
+
+E -> E: moveToNextStop(nextStop)
+loop for each floor movement
+    E -> E: moveOneFloor()
+    E -> ED: onElevatorFloorChange(elevator, floor)
+    activate ED
+    ED --> E:
+    deactivate ED
+end
+
+E -> E: completeArrival()
+E -> ED: onElevatorStateChange(elevator, STOPPED)
+activate ED
+ED --> E:
+deactivate ED
+
+E -> E: openDoors()
+E -> E: closeDoors()
+E -> ED: onElevatorStateChange(elevator, MOVING/IDLE)
+activate ED
+ED --> E:
+deactivate ED
+
+E --> EC:
+deactivate E
+EC --> ES:
+deactivate EC
+ES --> User:
+deactivate ES
+
+User -> ES: requestFloor(elevatorId, floor)
+activate ES
+ES -> EC: requestFloor(elevatorId, floor)
+activate EC
+
+EC -> E: addRequest(new ElevatorRequest())
+activate E
+E --> EC:
+deactivate E
+EC --> ES:
+deactivate EC
+ES --> User:
+deactivate ES
+
+User -> ES: emergencyStop(elevatorId)
+activate ES
+ES -> EC: emergencyStop(elevatorId)
+activate EC
+EC -> E: emergencyStop()
+activate E
+E -> ED: onElevatorStateChange(elevator, STOPPED)
+activate ED
+ED --> E:
+deactivate ED
+E --> EC:
+deactivate E
+EC --> ES:
+deactivate EC
+ES --> User:
+deactivate ES
+
+User -> ES: changeSchedulingStrategy()
+activate ES
+ES -> EC: setSchedulingStrategy(newStrategy)
+activate EC
+EC --> ES:
+deactivate EC
+ES --> User:
+deactivate ES
+@enduml

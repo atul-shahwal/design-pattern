@@ -1,0 +1,64 @@
+@startuml
+title Splitwise System - Object Interaction Diagram
+
+actor User as user
+participant "SplitwiseSystem" as main
+participant "ExpenseManager" as em
+participant "BalanceSheet" as bs
+participant "SplitFactory" as sf
+participant "EqualSplit" as es
+participant "PercentageSplit" as ps
+participant "Expense" as exp1
+participant "Expense" as exp2
+
+user -> main: Start Application
+main -> main: Create Users (Alice, Bob, Charlie)
+main -> em: Create ExpenseManager
+main -> bs: Create BalanceSheet
+main -> em: addObserver(bs)
+
+== Equal Split Expense ==
+user -> main: Add Dinner Expense ($60, Equal Split)
+main -> sf: createSplit("EQUAL")
+sf -> es: Create EqualSplit
+main -> es: calculateSplit(60, participants, {})
+es --> main: dinnerShares (Map<User, Double>)
+main -> exp1: new Expense("Dinner", 60, Alice, participants, dinnerShares)
+main -> em: addExpense(dinnerExpense)
+em -> bs: onExpenseAdded(dinnerExpense)
+bs -> bs: updateBalances(dinnerExpense)
+
+== Percentage Split Expense ==
+user -> main: Add Movie Expense ($45, Percentage Split)
+main -> sf: createSplit("PERCENTAGE")
+sf -> ps: Create PercentageSplit
+main -> ps: calculateSplit(45, participants, percentages)
+ps --> main: movieShares (Map<User, Double>)
+main -> exp2: new Expense("Movie", 45, Bob, participants, movieShares)
+main -> em: addExpense(movieExpense)
+em -> bs: onExpenseAdded(movieExpense)
+bs -> bs: updateBalances(movieExpense)
+
+== Balance Checking ==
+user -> main: Check Balances
+main -> bs: getTotalBalance(Alice)
+bs --> main: Alice's balance
+main -> bs: getTotalBalance(Bob)
+bs --> main: Bob's balance
+main -> bs: getTotalBalance(Charlie)
+bs --> main: Charlie's balance
+
+== Settlement Calculation ==
+user -> main: Calculate Settlements
+main -> bs: getSimplifiedSettlements()
+bs -> bs: calculateNetBalances()
+bs -> bs: matchDebtorsAndCreditors()
+bs --> main: List<Transaction>
+main -> main: Display Settlements
+
+user -> main: Get Minimum Transactions
+main -> bs: getMinimumSettlements()
+bs -> bs: calculateNetBalances()
+bs -> bs: dynamicProgrammingSettlement()
+bs --> main: minimumCount
+@enduml

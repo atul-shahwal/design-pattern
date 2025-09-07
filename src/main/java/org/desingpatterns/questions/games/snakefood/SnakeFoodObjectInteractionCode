@@ -1,0 +1,35 @@
+@startuml
+title Snake Game Sequence Diagram
+
+actor User
+participant SnakeGameMain
+participant SnakeGame
+participant MovementStrategy
+participant GameBoard
+participant GameObserver
+
+User -> SnakeGameMain: Start game
+SnakeGameMain -> SnakeGame: Initialize game
+SnakeGame -> GameBoard: getInstance()
+GameBoard --> SnakeGame: Board instance
+
+loop Game Loop
+  User -> SnakeGameMain: Input direction
+  SnakeGameMain -> SnakeGame: move(direction)
+  SnakeGame -> MovementStrategy: getNextPosition()
+  MovementStrategy --> SnakeGame: newHead position
+  SnakeGame -> GameBoard: check boundaries
+  GameBoard --> SnakeGame: boundary status
+  alt If food eaten
+    SnakeGame -> GameObserver: onFoodEaten()
+  else If collision
+    SnakeGame -> GameObserver: onGameOver()
+  else Normal move
+    SnakeGame -> GameObserver: onMoveMade()
+  end
+  SnakeGame --> SnakeGameMain: score
+  SnakeGameMain -> User: display update
+end
+
+User -> SnakeGameMain: Quit game
+@enduml

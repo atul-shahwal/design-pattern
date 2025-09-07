@@ -1,0 +1,53 @@
+@startuml
+title Web Crawler Class Diagram
+
+interface HtmlParser {
+  + getUrls(url: String): List<String>
+}
+
+class WebCrawler {
+  - hostname: String
+  - visited: ConcurrentHashMap<String, Boolean>
+  - executor: ExecutorService
+  - pendingTasks: AtomicInteger
+  - htmlParser: HtmlParser
+  + crawl(startUrl: String, htmlParser: HtmlParser): List<String>
+  - extractHostname(url: String): String
+  + main(args: String[])
+}
+
+class CrawlTask {
+  - url: String
+  + run()
+}
+
+class MockHtmlParser {
+  + getUrls(url: String): List<String>
+}
+
+WebCrawler --> HtmlParser : uses
+WebCrawler *-- CrawlTask : creates
+CrawlTask ..|> Runnable : implements
+MockHtmlParser ..|> HtmlParser : implements
+WebCrawler ..> MockHtmlParser : uses for testing
+
+note right of WebCrawler
+  Design Patterns:
+  - Thread Pool pattern for managing
+    concurrent tasks
+  - Producer-Consumer pattern for
+    URL processing
+  - Singleton pattern for shared
+    data structures (visited URLs)
+end note
+
+note right of CrawlTask
+  Functionality:
+  - Implements Runnable interface
+  - Processes a single URL
+  - Retrieves linked URLs
+  - Filters by hostname
+  - Submits new tasks for
+    unvisited URLs
+end note
+@enduml

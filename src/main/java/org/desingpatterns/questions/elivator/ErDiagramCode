@@ -1,0 +1,147 @@
+@startuml
+!pragma useVerticalIf on
+
+title Elevator System Object Interaction Diagram
+
+package "Elevator System" {
+  class Building {
+    - name: String
+    - numberOfFloors: int
+    - elevatorController: ElevatorController
+    + getName(): String
+    + getNumberOfFloors(): int
+    + getElevatorController(): ElevatorController
+  }
+
+  class ElevatorController {
+    - elevators: List<Elevator>
+    - floors: List<Floor>
+    - schedulingStrategy: SchedulingStrategy
+    + setSchedulingStrategy(strategy: SchedulingStrategy): void
+    + requestElevator(floor: int, direction: Direction): void
+    + requestFloor(elevatorId: int, floor: int): void
+    + step(): void
+    + emergencyStop(elevatorId: int): void
+    + resumeEmergency(elevatorId: int): void
+    + setMaintenanceMode(elevatorId: int, maintenance: boolean): void
+    - findBestElevator(floor: int, direction: Direction): Elevator
+  }
+
+  class Elevator {
+    - id: int
+    - currentFloor: int
+    - direction: Direction
+    - state: ElevatorState
+    - observers: List<ElevatorObserver>
+    - requests: Queue<ElevatorRequest>
+    - capacity: int
+    - currentLoad: int
+    - emergencyStop: boolean
+    - doorObstructed: boolean
+    + addObserver(observer: ElevatorObserver): void
+    + addRequest(request: ElevatorRequest): void
+    + moveToNextStop(nextStop: int): void
+    + emergencyStop(): void
+    + resumeFromEmergency(): void
+    + addLoad(weight: int): boolean
+    + removeLoad(weight: int): void
+  }
+
+  interface ElevatorObserver {
+    + onElevatorStateChange(elevator: Elevator, state: ElevatorState): void
+    + onElevatorFloorChange(elevator: Elevator, floor: int): void
+  }
+
+  class ElevatorDisplay {
+    + onElevatorStateChange(elevator: Elevator, state: ElevatorState): void
+    + onElevatorFloorChange(elevator: Elevator, floor: int): void
+  }
+
+  class Floor {
+    - floorNumber: int
+    + getFloorNumber(): int
+  }
+
+  class ElevatorRequest {
+    - floor: int
+    - direction: Direction
+    - isInternalRequest: boolean
+    + getFloor(): int
+    + getDirection(): Direction
+    + isInternalRequest(): boolean
+  }
+}
+
+package "Scheduling Strategies" {
+  interface SchedulingStrategy {
+    + getNextStop(elevator: Elevator): int
+  }
+
+  class FCFSSchedulingStrategy {
+    + getNextStop(elevator: Elevator): int
+  }
+
+  class ScanSchedulingStrategy {
+    + getNextStop(elevator: Elevator): int
+  }
+
+  class LookSchedulingStrategy {
+    + getNextStop(elevator: Elevator): int
+  }
+}
+
+package "Enums" {
+  enum Direction {
+    UP
+    DOWN
+    IDLE
+  }
+
+  enum ElevatorState {
+    IDLE
+    MOVING
+    STOPPED
+    MAINTENANCE
+  }
+}
+
+' Relationships
+ElevatorController "1" *-- "many" Elevator : manages
+ElevatorController "1" *-- "many" Floor : contains
+ElevatorController "1" o-- "1" SchedulingStrategy : uses
+
+Elevator "1" *-- "many" ElevatorRequest : processes
+Elevator "1" o-- "many" ElevatorObserver : notifies
+ElevatorDisplay ..|> ElevatorObserver : implements
+
+Building "1" *-- "1" ElevatorController : contains
+
+FCFSSchedulingStrategy ..|> SchedulingStrategy : implements
+ScanSchedulingStrategy ..|> SchedulingStrategy : implements
+LookSchedulingStrategy ..|> SchedulingStrategy : implements
+
+ElevatorRequest --> Direction : uses
+Elevator --> Direction : uses
+Elevator --> ElevatorState : uses
+
+' Notes
+note top of ElevatorController
+  Handles elevator assignment,
+  floor requests, and system
+  operations like emergency stops
+  and maintenance mode.
+end note
+
+note right of Elevator
+  Maintains current state,
+  direction, load, and
+  processes requests using
+  the assigned strategy.
+end note
+
+note right of SchedulingStrategy
+  Different algorithms for
+  determining the next stop:
+  FCFS, SCAN, and LOOK
+end note
+@enduml

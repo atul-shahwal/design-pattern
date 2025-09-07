@@ -1,0 +1,29 @@
+@startuml
+actor User
+participant Cache
+participant KeyBasedExecutor
+participant CacheStorage
+participant EvictionAlgorithm
+participant WritePolicy
+participant DBStorage
+
+User -> Cache: updateData(key, value)
+Cache -> KeyBasedExecutor: submitTask(key, task)
+KeyBasedExecutor -> Cache: execute in key-specific thread
+
+alt cache contains key
+    Cache -> WritePolicy: write(key, value, cacheStorage, dbStorage)
+    WritePolicy -> CacheStorage: put(key, value)
+    WritePolicy -> DBStorage: write(key, value)
+    Cache -> EvictionAlgorithm: keyAccessed(key)
+else cache full
+    Cache -> EvictionAlgorithm: evictKey()
+    EvictionAlgorithm -> CacheStorage: remove(evictedKey)
+    Cache -> WritePolicy: write(key, value, cacheStorage, dbStorage)
+    WritePolicy -> CacheStorage: put(key, value)
+    WritePolicy -> DBStorage: write(key, value)
+    Cache -> EvictionAlgorithm: keyAccessed(key)
+end
+
+Cache --> User: CompletableFuture<Void>
+@enduml
