@@ -4,9 +4,11 @@ participant Cache
 participant KeyBasedExecutor
 participant CacheStorage
 participant EvictionAlgorithm
+participant ReadPolicy
 participant WritePolicy
 participant DBStorage
 
+== Write Path ==
 User -> Cache: updateData(key, value)
 Cache -> KeyBasedExecutor: submitTask(key, task)
 KeyBasedExecutor -> Cache: execute in key-specific thread
@@ -26,4 +28,25 @@ else cache full
 end
 
 Cache --> User: CompletableFuture<Void>
+
+== Read Path ==
+User -> Cache: accessData(key)
+Cache -> KeyBasedExecutor: submitTask(key, task)
+KeyBasedExecutor -> Cache: execute in key-specific thread
+
+alt cache hit
+    Cache -> CacheStorage: get(key)
+    Cache -> EvictionAlgorithm: keyAccessed(key)
+    Cache --> User: CompletableFuture<Value>
+else cache miss
+    Cache -> ReadPolicy: read(key, cacheStorage, dbStorage)
+    ReadPolicy -> DBStorage: read(key)
+    alt key found in DB
+        ReadPolicy -> CacheStorage: put(key, value)
+        Cache -> EvictionAlgorithm: keyAccessed(key)
+        Cache --> User: CompletableFuture<Value>
+    else key not found
+        Cache --> User: CompletableFuture<Error: Key not found>
+    end
+end
 @enduml

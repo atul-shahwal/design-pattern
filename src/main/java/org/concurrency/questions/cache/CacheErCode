@@ -33,6 +33,14 @@ note right of WritePolicy
   write-back).
 end note
 
+interface ReadPolicy {
+    + read(key, cacheStorage, dbStorage): value
+}
+note right of ReadPolicy
+  Defines how reads are handled
+  (e.g., read-through, cache-aside).
+end note
+
 interface EvictionAlgorithm {
     + keyAccessed(key)
     + evictKey(): key
@@ -67,6 +75,14 @@ class WriteThroughPolicy {
 note right of WriteThroughPolicy
   Ensures data is written to both
   cache and DB immediately.
+end note
+
+class ReadThroughPolicy {
+    + read(key, cacheStorage, dbStorage): value
+}
+note right of ReadThroughPolicy
+  Ensures data is loaded from DB
+  on cache miss and stored in cache.
 end note
 
 class LRUEvictionAlgorithm {
@@ -119,6 +135,7 @@ class Cache {
     - cacheStorage: CacheStorage<K, V>
     - dbStorage: DBStorage<K, V>
     - writePolicy: WritePolicy<K, V>
+    - readPolicy: ReadPolicy<K, V>
     - evictionAlgorithm: EvictionAlgorithm<K>
     - keyBasedExecutor: KeyBasedExecutor
     + accessData(key): CompletableFuture<V>
@@ -127,24 +144,27 @@ class Cache {
 note right of Cache
   Central class that integrates
   cache storage, DB, eviction,
-  and write policy. Provides async
-  access/update APIs.
+  read policy, and write policy.
+  Provides async access/update APIs.
 end note
 
 CacheStorage <|.. InMemoryCacheStorage
 DBStorage <|.. SimpleDBStorage
 WritePolicy <|.. WriteThroughPolicy
+ReadPolicy <|.. ReadThroughPolicy
 EvictionAlgorithm <|.. LRUEvictionAlgorithm
 LRUEvictionAlgorithm o-- DoublyLinkedList
 DoublyLinkedList o-- DoublyLinkedListNode
 Cache o-- CacheStorage
 Cache o-- DBStorage
 Cache o-- WritePolicy
+Cache o-- ReadPolicy
 Cache o-- EvictionAlgorithm
 Cache o-- KeyBasedExecutor
 
 note right of CacheStorage: Strategy Pattern\nfor storage implementation
 note right of WritePolicy: Strategy Pattern\nfor write policies
+note right of ReadPolicy: Strategy Pattern\nfor read policies
 note right of EvictionAlgorithm: Strategy Pattern\nfor eviction algorithms
 note right of KeyBasedExecutor: Thread affinity\nfor key-based ordering
 @enduml
