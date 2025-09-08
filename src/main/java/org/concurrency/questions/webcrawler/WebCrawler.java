@@ -4,6 +4,31 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * 🎯 Problem Statement: Low-Level Design - Web Crawler
+ *
+ * Design a web crawler that traverses web pages starting from a given URL, staying within the same hostname.
+ * The system should efficiently process multiple URLs concurrently while avoiding redundant visits.
+ *
+ * ✅ Requirements:
+ * - Crawl URLs only under the same domain as the starting point.
+ * - Avoid revisiting already crawled URLs.
+ * - Support concurrency using thread pools and atomic counters.
+ * - Ensure thread-safe operations on shared data.
+ *
+ * 📦 Key Components:
+ * - HtmlParser interface to extract URLs from a page.
+ * - WebCrawler to manage crawling tasks and state.
+ * - ExecutorService to process tasks concurrently.
+ * - Atomic counters and concurrent maps to track progress and visited URLs.
+ *
+ * 🚀 Example Flow:
+ * 1. Parse URLs from the current page.
+ * 2. Filter URLs with the same hostname.
+ * 3. Avoid revisiting URLs by checking a thread-safe set.
+ * 4. Submit new crawl tasks for each valid URL.
+ */
+
 // HtmlParser interface as defined in the problem
 interface HtmlParser {
     List<String> getUrls(String url);

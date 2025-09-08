@@ -6,24 +6,29 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
 
 /**
- * Rate Limiter Implementation with Token Bucket Algorithm
+ * 🎯 Problem Statement: Low-Level Design - Rate Limiter
  *
- * This implementation provides a thread-safe rate limiter that supports both
- * global and per-user rate limiting using the Token Bucket algorithm.
+ * Design a rate limiter that controls access frequency using algorithms like Token Bucket.
+ * The system should support global and per-user limits while ensuring thread safety and configurability.
  *
- * Design Patterns Used:
- * 1. Strategy Pattern - IRateLimiter interface allows different rate limiting algorithms
- * 2. Factory Pattern - RateLimiterFactory creates appropriate rate limiter instances
- * 3. Facade Pattern - RateLimiterController simplifies client interaction
+ * ✅ Requirements:
+ * - Enforce limits based on requests per user or globally.
+ * - Implement refill logic with configurable rates.
+ * - Support pluggable algorithms like Token Bucket, Fixed Window.
+ * - Ensure thread safety with proper synchronization.
+ *
+ * 📦 Key Components:
+ * - IRateLimiter interface for algorithm abstraction.
+ * - TokenBucketStrategy for managing tokens.
+ * - RateLimiterFactory for creating strategies.
+ * - RateLimiterController for handling requests.
+ *
+ * 🚀 Example Flow:
+ * 1. Incoming request is checked against available tokens.
+ * 2. Tokens are consumed if available; otherwise, access is blocked.
+ * 3. Scheduled task refills tokens at fixed intervals.
  */
 
-// ===============================
-// 1. IRateLimiter Interface (Strategy Pattern)
-// ===============================
-/**
- * Interface for all rate limiting strategies.
- * New strategies can be added by implementing this interface.
- */
 interface IRateLimiter {
     boolean giveAccess(String rateLimitKey);
     void updateConfiguration(Map<String, Object> config);

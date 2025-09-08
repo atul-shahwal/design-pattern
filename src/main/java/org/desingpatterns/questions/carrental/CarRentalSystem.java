@@ -2,6 +2,34 @@ package org.desingpatterns.questions.carrental;
 import java.util.*;
 import java.text.SimpleDateFormat;
 
+/**
+ * 🎯 Problem Statement: Low-Level Design - Car Rental System
+ *
+ * Design a car rental system that manages vehicles, reservations, payments, and multiple rental stores.
+ * The system should support different vehicle types, rental periods, payment methods, and ensure concurrency control.
+ *
+ * ✅ Requirements:
+ * - Manage multiple rental stores with inventory of vehicles.
+ * - Support various vehicle types (economy, luxury, SUV) with different pricing.
+ * - Handle reservations with pick-up and return locations and dates.
+ * - Process payments via multiple methods (credit card, cash, PayPal).
+ * - Ensure thread-safe operations for concurrent bookings.
+ *
+ * 📦 Key Components:
+ * - Vehicle hierarchy with specialized classes (EconomyVehicle, LuxuryVehicle, etc.).
+ * - RentalStore class for each physical location.
+ * - Reservation class to track booking details.
+ * - PaymentStrategy interface for different payment methods.
+ * - RentalSystem singleton to manage global operations.
+ *
+ * 🚀 Example Flow:
+ * 1. User selects vehicle type and rental period → system checks availability.
+ * 2. System creates a reservation and temporarily locks the vehicle.
+ * 3. User pays via chosen method → payment processed → reservation confirmed.
+ * 4. User picks up vehicle at scheduled time → rental period starts.
+ * 5. Upon return, vehicle is marked available for future rentals.
+ */
+// ... existing code ...
 // ENUM DEFINITIONS
 enum VehicleType { ECONOMY, LUXURY, SUV, BIKE, AUTO }
 enum VehicleStatus { AVAILABLE, RESERVED, RENTED, MAINTENANCE, OUT_OF_SERVICE }

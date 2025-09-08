@@ -3,6 +3,33 @@ package org.desingpatterns.questions.atmmachine;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * 🎯 Problem Statement: Low-Level Design - ATM System
+ *
+ * Design an ATM system that handles user authentication, transaction processing, and cash dispensing.
+ * The system should manage multiple states (idle, card inserted, PIN validated, etc.), validate user inputs,
+ * and handle cash inventory securely and efficiently.
+ *
+ * ✅ Requirements:
+ * - Support card insertion and PIN validation.
+ * - Allow cash withdrawal and balance inquiry transactions.
+ * - Manage cash inventory with different denominations.
+ * - Handle state transitions smoothly (idle → has card → transaction → idle).
+ * - Ensure secure authentication and transaction processing.
+ *
+ * 📦 Key Components:
+ * - Card and Account classes for user data and validation.
+ * - ATMInventory for cash denomination management.
+ * - ATMState interface and concrete states (IdleState, HasCardState, etc.).
+ * - ATMMachine class to orchestrate operations and state transitions.
+ *
+ * 🚀 Example Flow:
+ * 1. User inserts card → system transitions to HasCardState.
+ * 2. User enters PIN → system validates and moves to SelectOperationState.
+ * 3. User selects withdrawal → system processes transaction in TransactionState.
+ * 4. If successful, cash is dispensed, and card is ejected → system returns to IdleState.
+ */
+
 // Enum representing cash denominations
 enum CashType {
     BILL_100(100), BILL_50(50), BILL_20(20), BILL_10(10), BILL_5(5), BILL_1(1);

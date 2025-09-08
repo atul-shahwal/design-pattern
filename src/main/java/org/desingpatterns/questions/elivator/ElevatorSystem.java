@@ -1,7 +1,32 @@
 package org.desingpatterns.questions.elivator;
 
 import java.util.*;
-
+/**
+ * 🎯 Problem Statement: Low-Level Design - Elevator System
+ *
+ * Design an elevator system that handles multiple elevators, floor requests, and different scheduling strategies.
+ * The system should efficiently manage elevator movement to minimize waiting time and provide a simulation interface.
+ *
+ * ✅ Requirements:
+ * - Support multiple elevators and floors in a building.
+ * - Handle internal (from inside elevator) and external (from floors) requests.
+ * - Implement scheduling strategies (FCFS, SCAN, LOOK) for optimal performance.
+ * - Manage elevator states (idle, moving, stopped) and direction (up/down).
+ * - Provide a user interface for simulation and testing.
+ *
+ * 📦 Key Components:
+ * - Elevator class with state, direction, and request queue.
+ * - ElevatorController to manage elevators and assign requests.
+ * - SchedulingStrategy interface and concrete implementations.
+ * - Building class to contain elevators and floors.
+ * - User interface for interactive simulation.
+ *
+ * 🚀 Example Flow:
+ * 1. User requests elevator from floor 5 → controller assigns best elevator.
+ * 2. Elevator moves to floor 5 → picks up user → user selects floor 10.
+ * 3. Elevator moves to floor 10 → drops off user → becomes idle or serves next request.
+ * 4. Scheduling strategy ensures efficient handling of multiple requests.
+ */
 // Enums for direction and elevator state
 enum Direction {
     UP, DOWN, IDLE

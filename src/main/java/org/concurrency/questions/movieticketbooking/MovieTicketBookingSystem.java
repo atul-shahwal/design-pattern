@@ -5,6 +5,31 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+/**
+ * 🎯 Problem Statement: Low-Level Design - Movie Ticket Booking System
+ *
+ * Design a system for booking movie tickets that manages theatres, screens, shows, and seats.
+ * It must ensure seat availability, prevent conflicts during concurrent bookings, and handle payments securely.
+ *
+ * ✅ Requirements:
+ * - Manage multiple theatres, screens, and shows.
+ * - Allow users to select and lock seats before payment.
+ * - Confirm bookings only after successful payment.
+ * - Support multiple payment methods.
+ *
+ * 📦 Key Components:
+ * - Movie, Theatre, Screen, Show, Seat, Booking domain models.
+ * - SeatLockProvider for seat locking logic.
+ * - BookingService for managing booking lifecycle.
+ * - PaymentService with various payment strategies.
+ *
+ * 🚀 Example Flow:
+ * 1. User selects a show and seats.
+ * 2. Seats are locked and booking is created.
+ * 3. Payment is processed, and booking confirmed upon success.
+ * 4. Locks are released after confirmation or failure.
+ */
+
 // Enums
 enum BookingStatus { CREATED, CONFIRMED, EXPIRED }
 enum SeatCategory { SILVER, GOLD, PLATINUM }

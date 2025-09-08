@@ -2,6 +2,33 @@ package org.desingpatterns.questions.inventorymanagement;
 
 import java.util.*;
 
+/**
+ * 🎯 Problem Statement: Low-Level Design - Inventory Management System
+ *
+ * Design an inventory management system that tracks products, manages stock levels, and notifies when stock is low.
+ * The system should support different product categories, warehouses, and replenishment strategies.
+ *
+ * ✅ Requirements:
+ * - Manage products with SKUs, categories, prices, and stock levels.
+ * - Support multiple warehouses for inventory storage.
+ * - Notify observers (e.g., suppliers) when stock levels fall below threshold.
+ * - Use replenishment strategies (just-in-time, bulk order) for restocking.
+ * - Use builder pattern for flexible product creation.
+ *
+ * 📦 Key Components:
+ * - Product abstract class and concrete subclasses (Electronics, Clothing, etc.).
+ * - Warehouse class for inventory storage per location.
+ * - InventoryObserver interface and concrete observers (SupplierNotifier, etc.).
+ * - ReplenishmentStrategy interface and implementations.
+ * - InventoryManager singleton to coordinate operations.
+ *
+ * 🚀 Example Flow:
+ * 1. Product is added to warehouse with initial stock → stock level recorded.
+ * 2. Stock decreases due to sales → system checks against threshold.
+ * 3. If stock low, notifies observers → triggers replenishment strategy.
+ * 4. New stock arrives → inventory updated → notifications cleared.
+ */
+
 // Product Category Enum
 enum ProductCategory {
     ELECTRONICS, CLOTHING, GROCERY, FURNITURE, OTHER

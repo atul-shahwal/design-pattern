@@ -7,7 +7,33 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Supplier;
-
+/**
+ * 🎯 Problem Statement: Low-Level Design - NoSQL Database System
+ *
+ * Design a NoSQL database system that supports CRUD operations, indexing, querying, and concurrency control.
+ * The system should include persistence, replication, and sharding strategies for scalability and reliability.
+ *
+ * ✅ Requirements:
+ * - Store documents as key-value pairs with support for CRUD operations.
+ * - Allow indexing on document fields for efficient querying.
+ * - Handle concurrent access with per-key locking to prevent dirty reads/writes.
+ * - Support write strategies (write-through) for persistence.
+ * - Include replication and sharding strategies for scalability.
+ *
+ * 📦 Key Components:
+ * - DocumentStorage interface and in-memory implementation.
+ * - PersistentStorage interface for persistence layer.
+ * - WriteStrategy interface for write operations.
+ * - ReplicationStrategy and ShardingStrategy interfaces.
+ * - KeyBasedLocking for concurrency control.
+ * - NoSQLDatabase class to orchestrate operations.
+ *
+ * 🚀 Example Flow:
+ * 1. Client puts document with key → stored in memory and persisted.
+ * 2. Client queries documents by field value → uses index for efficiency.
+ * 3. Concurrent puts for same key are serialized with locks.
+ * 4. Replication strategy copies data to replicas for redundancy.
+ */
 /**
  * Main interface for NoSQL document storage.
  * Provides CRUD operations and supports querying and indexing.

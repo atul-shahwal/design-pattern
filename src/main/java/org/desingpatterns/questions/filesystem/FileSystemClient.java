@@ -3,6 +3,34 @@ package org.desingpatterns.questions.filesystem;
 import java.time.LocalDateTime;
 import java.util.*;
 
+/**
+ * 🎯 Problem Statement: Low-Level Design - File System
+ *
+ * Design a file system that supports creating files and directories, reading/writing content, and deleting paths.
+ * The system should use composite pattern for nodes and command pattern for operations, with a client interface.
+ *
+ * ✅ Requirements:
+ * - Support hierarchical structure with files and directories.
+ * - Allow create, read, write, and delete operations on paths.
+ * - Use composite pattern to represent file system nodes.
+ * - Use command pattern to encapsulate operations as objects.
+ * - Provide a client for user interaction via commands.
+ *
+ * 📦 Key Components:
+ * - FileSystemNode abstract class for files and directories.
+ * - File and Directory concrete classes.
+ * - FileSystem class to manage the root and operations.
+ * - Command interface and concrete commands (Create, Write, etc.).
+ * - CommandFactory to parse and create commands.
+ *
+ * 🚀 Example Flow:
+ * 1. User creates a directory path "/docs" → system creates directory.
+ * 2. User creates a file "/docs/note.txt" → system creates file.
+ * 3. User writes "Hello" to the file → content is stored.
+ * 4. User reads the file → content "Hello" is displayed.
+ * 5. User deletes the file or directory → path is removed.
+ */
+
 // Base class for File System Node (Composite Pattern)
 abstract class FileSystemNode {
     private String name;

@@ -2,7 +2,32 @@ package org.desingpatterns.questions.parkinglot;
 
 import java.time.LocalDateTime;
 import java.util.*;
-
+/**
+ * 🎯 Problem Statement: Low-Level Design - Parking Lot System
+ *
+ * Design a parking lot system that manages multiple buildings, floors, and parking slots for different vehicle types.
+ * The system should handle vehicle parking, fee calculation, payment processing, and provide real-time availability.
+ *
+ * ✅ Requirements:
+ * - Support different vehicle types (bike, car, truck) with dedicated slots.
+ * - Manage parking slots with availability, reservation, and electric charging options.
+ * - Calculate parking fees based on vehicle type and duration.
+ * - Process payments via multiple methods (cash, card, etc.).
+ * - Provide real-time status of available slots per building/floor.
+ *
+ * 📦 Key Components:
+ * - Vehicle abstract class and concrete subclasses (Bike, Car, Truck).
+ * - ParkingSlot class for individual slots with attributes.
+ * - Floor and Building classes to organize slots hierarchically.
+ * - ParkingTicket class to track parking sessions.
+ * - ParkingLot class to manage operations and availability.
+ *
+ * 🚀 Example Flow:
+ * 1. Vehicle arrives → system finds available slot based on type.
+ * 2. Ticket issued upon entry → slot marked occupied.
+ * 3. Upon exit, fee calculated based on duration → payment processed.
+ * 4. After payment, slot freed → available for next vehicle.
+ */
 // Enums
 enum VehicleType {
     BIKE, CAR, TRUCK

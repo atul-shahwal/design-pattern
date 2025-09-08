@@ -3,6 +3,33 @@ package org.desingpatterns.questions.vendingmachine;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 🎯 Problem Statement: Low-Level Design - Vending Machine System
+ *
+ * Design a vending machine system that manages inventory, handles coin insertion, product selection, and dispensing.
+ * The system should use state pattern to manage different states and provide change when necessary.
+ *
+ * ✅ Requirements:
+ * - Manage inventory of items with codes, prices, and stock levels.
+ * - Handle insertion of coins and validate sufficient amount for selection.
+ * - Allow product selection based on inserted coins and available inventory.
+ * - Dispense products and return change if overpaid.
+ * - Use state pattern for states (idle, has money, selection, dispense).
+ *
+ * 📦 Key Components:
+ * - Item class for product details.
+ * - ItemShelf class for inventory slots.
+ * - Inventory class to manage items and stock.
+ * - VendingMachineState interface and concrete states.
+ * - VendingMachineContext class to manage state transitions.
+ *
+ * 🚀 Example Flow:
+ * 1. User inserts coins → machine transitions to HasMoneyState.
+ * 2. User selects product → machine checks availability and sufficient funds.
+ * 3. If valid, machine dispenses product → returns change if needed.
+ * 4. Machine returns to IdleState after transaction.
+ */
+
 // Enum representing different types of items in the vending machine
 enum ItemType {
     COKE,

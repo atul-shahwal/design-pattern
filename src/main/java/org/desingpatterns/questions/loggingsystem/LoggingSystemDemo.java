@@ -6,6 +6,34 @@ import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * 🎯 Problem Statement: Low-Level Design - Logging System
+ *
+ * Design a logging system that supports multiple log levels, formatters, and appenders.
+ * The system should be configurable, use chain of responsibility for log handling, and support various outputs.
+ *
+ * ✅ Requirements:
+ * - Support log levels (debug, info, warning, error, fatal) with severity-based filtering.
+ * - Allow different log formatters (simple, JSON) for output formatting.
+ * - Support multiple appenders (console, file) for log output.
+ * - Use chain of responsibility to handle log messages based on level.
+ * - Provide configuration for log level, formatter, and appender.
+ *
+ * 📦 Key Components:
+ * - LogLevel enum for severity levels.
+ * - LogMessage class to encapsulate log data.
+ * - LogFormatter interface and implementations (SimpleLogFormatter, JsonLogFormatter).
+ * - LogAppender interface and implementations (ConsoleAppender, FileAppender).
+ * - LogHandler abstract class and concrete handlers for each level.
+ * - Logger singleton for logging operations.
+ *
+ * 🚀 Example Flow:
+ * 1. Logger configured with log level INFO and JSON formatter to file.
+ * 2. Application logs debug message → ignored due to level.
+ * 3. Application logs error message → formatted as JSON → written to file.
+ * 4. Chain of responsibility handles message based on severity.
+ */
+
 // Enum representing different log severity levels
 enum LogLevel {
     DEBUG(1),   // Debug-level messages (least severe)

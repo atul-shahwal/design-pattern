@@ -4,6 +4,31 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Supplier;
 
+/**
+ * 🎯 Problem Statement: Low-Level Design - Cache System
+ *
+ * Design a thread-safe cache that supports various eviction algorithms, write policies,
+ * and ensures consistency between in-memory cache and persistent storage.
+ *
+ * ✅ Requirements:
+ * - Configurable capacity with eviction when full (e.g., LRU).
+ * - Write-through strategy for cache and database synchronization.
+ * - Handle concurrent access efficiently using per-key execution.
+ * - Support for scaling and multiple eviction strategies.
+ *
+ * 📦 Key Components:
+ * - CacheStorage & DBStorage interfaces for cache and database operations.
+ * - WritePolicy interface for different write strategies.
+ * - EvictionAlgorithm interface for eviction mechanisms like LRU.
+ * - KeyBasedExecutor to ensure per-key thread safety.
+ *
+ * 🚀 Example Flow:
+ * 1. Accessing a key updates its access record.
+ * 2. Insertion triggers eviction if capacity exceeded.
+ * 3. Writes update both cache and database asynchronously.
+ */
+
+
 // Cache Storage Interface
 interface CacheStorage<K, V> {
     void put(K key, V value) throws Exception;

@@ -2,7 +2,35 @@ package org.desingpatterns.questions.splitwise;
 
 import java.util.*;
 import java.util.stream.Collectors;
-
+/**
+ * 🎯 Problem Statement: Low-Level Design - Expense Sharing System (Splitwise Clone)
+ *
+ * Design an expense sharing system that allows users to add expenses, split costs equally or by percentage,
+ * track balances between users, and generate simplified settlements to minimize the number of transactions.
+ * The system should ensure accurate balance calculations and provide insights into who owes whom.
+ *
+ * ✅ Requirements:
+ * - Support users and expenses with descriptions, amounts, and payers.
+ * - Allow equal and percentage-based cost splitting among participants.
+ * - Track balances between users and provide total balances per user.
+ * - Generate simplified settlements to reduce the number of transactions.
+ * - Use observer pattern to update balances when expenses are added or updated.
+ *
+ * 📦 Key Components:
+ * - User class for user details.
+ * - Expense class to store expense data and shares.
+ * - Split interface and implementations (EqualSplit, PercentageSplit).
+ * - BalanceSheet class to track and simplify balances.
+ * - ExpenseManager class to manage expenses and notify observers.
+ * - Transaction class for representing payments between users.
+ *
+ * 🚀 Example Flow:
+ * 1. User adds an expense with participants and split type → shares are calculated.
+ * 2. Balances are updated between the payer and participants.
+ * 3. Users can view their total balances and pairwise balances.
+ * 4. System suggests settlements with minimal transactions to clear debts.
+ * 5. Settlements are executed, and balances are updated.
+ */
 // User class
 class User {
     private String id;
