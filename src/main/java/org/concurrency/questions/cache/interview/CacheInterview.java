@@ -4,6 +4,11 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+/**
+ * ❓ Interview Q: Why do we need this interface?
+ * ✅ A: It defines the contract for any cache storage implementation (e.g., in-memory, Redis, file-based).
+ *     This allows us to swap implementations without changing the cache logic (OCP - Open/Closed Principle).
+ */
 interface CacheStorage<K, V> {
     void put(K key, V value);
     V get(K key);
@@ -13,25 +18,54 @@ interface CacheStorage<K, V> {
     int getCapacity();
 }
 
+/**
+ * ❓ Q: Why do we need DBStorage separately when we already have cache?
+ * ✅ A: The DB acts as persistent storage (truth source). Cache is faster but volatile.
+ *     Keeping them separate enforces abstraction and allows switching between database types easily.
+ */
 interface DBStorage<K, V> {
     void write(K key, V value);
     V read(K key);
     void delete(K key);
 }
 
+/**
+ * ❓ Q: Why do we need different WritePolicy strategies?
+ * ✅ A: To support multiple policies:
+ *       - Write-through: write to cache + DB together
+ *       - Write-back: write to cache first, DB later
+ *     This is Strategy Pattern in action.
+ */
 interface WritePolicy<K, V> {
     void write(K key, V value, CacheStorage<K, V> cache, DBStorage<K, V> db);
 }
 
+/**
+ * ❓ Q: Why do we need a ReadPolicy interface?
+ * ✅ A: It decouples how reads are handled.
+ *     - Read-through: fetch from DB on cache miss
+ *     - Read-around: bypass cache for some reads
+ *     This gives flexibility.
+ */
 interface ReadPolicy<K, V> {
     V read(K key, CacheStorage<K, V> cache, DBStorage<K, V> db);
 }
 
+/**
+ * ❓ Q: Why do we need an EvictionAlgorithm?
+ * ✅ A: Since cache has limited capacity, we need eviction strategies (LRU, LFU, FIFO).
+ *     This again uses Strategy Pattern for plug-and-play eviction.
+ */
 interface EvictionAlgorithm<K> {
     void keyAccessed(K key);
     K evictKey();
 }
 
+/**
+ * ❓ Q: Why use ConcurrentHashMap here instead of HashMap?
+ * ✅ A: Cache must be thread-safe since multiple threads may read/write simultaneously.
+ *     ConcurrentHashMap provides high performance with fine-grained locking.
+ */
 class InMemoryCacheStorage<K, V> implements CacheStorage<K, V> {
     private final Map<K, V> cache = new ConcurrentHashMap<>();
     private final int capacity;
@@ -46,6 +80,11 @@ class InMemoryCacheStorage<K, V> implements CacheStorage<K, V> {
     public int getCapacity() { return capacity; }
 }
 
+/**
+ * ❓ Q: Why do we keep a DB map here instead of a real DB?
+ * ✅ A: This is a mock DB for demonstration.
+ *     In real systems, it could be replaced with MySQL, MongoDB, etc.
+ */
 class SimpleDBStorage<K, V> implements DBStorage<K, V> {
     private final Map<K, V> db = new ConcurrentHashMap<>();
     public void write(K key, V value) { db.put(key, value); }
@@ -53,6 +92,11 @@ class SimpleDBStorage<K, V> implements DBStorage<K, V> {
     public void delete(K key) { db.remove(key); }
 }
 
+/**
+ * ❓ Q: Why write to both cache and DB together?
+ * ✅ A: To ensure consistency. In case of crash, data is already in DB.
+ *     Downside: higher write latency compared to write-back.
+ */
 class WriteThroughPolicy<K, V> implements WritePolicy<K, V> {
     public void write(K key, V value, CacheStorage<K, V> cache, DBStorage<K, V> db) {
         cache.put(key, value);
@@ -60,6 +104,10 @@ class WriteThroughPolicy<K, V> implements WritePolicy<K, V> {
     }
 }
 
+/**
+ * ❓ Q: Why update cache on a read miss?
+ * ✅ A: To improve future read performance. This avoids repeated DB hits for the same key.
+ */
 class ReadThroughPolicy<K, V> implements ReadPolicy<K, V> {
     public V read(K key, CacheStorage<K, V> cache, DBStorage<K, V> db) {
         V value = db.read(key);
@@ -70,6 +118,11 @@ class ReadThroughPolicy<K, V> implements ReadPolicy<K, V> {
     }
 }
 
+/**
+ * ❓ Q: Why LinkedHashMap for LRU?
+ * ✅ A: LinkedHashMap maintains insertion/access order, making it easy to evict the least recently used entry.
+ *     We also use ReentrantReadWriteLock for thread-safety.
+ */
 class LRUEvictionAlgorithm<K> implements EvictionAlgorithm<K> {
     private final LinkedHashMap<K, Boolean> lruMap;
     private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
@@ -81,10 +134,8 @@ class LRUEvictionAlgorithm<K> implements EvictionAlgorithm<K> {
     public void keyAccessed(K key) {
         lock.writeLock().lock();
         try {
-            // If key exists, access it to update its position
-            // If key doesn't exist, add it to the map
             if (lruMap.containsKey(key)) {
-                lruMap.get(key); // Access to update order
+                lruMap.get(key); // Touch to update access order
             } else {
                 lruMap.put(key, true);
             }
@@ -96,11 +147,8 @@ class LRUEvictionAlgorithm<K> implements EvictionAlgorithm<K> {
     public K evictKey() {
         lock.writeLock().lock();
         try {
-            if (lruMap.isEmpty()) {
-                return null;
-            }
+            if (lruMap.isEmpty()) return null;
 
-            // The first element is the least recently used
             Iterator<K> it = lruMap.keySet().iterator();
             K keyToEvict = it.next();
             it.remove();
@@ -111,6 +159,11 @@ class LRUEvictionAlgorithm<K> implements EvictionAlgorithm<K> {
     }
 }
 
+/**
+ * ❓ Q: Why use KeyBasedExecutor instead of a global thread pool?
+ * ✅ A: It ensures all operations for the same key are serialized
+ *     (avoiding race conditions like double-writes).
+ */
 class KeyBasedExecutor {
     private final ExecutorService[] executors;
 
@@ -130,6 +183,12 @@ class KeyBasedExecutor {
     }
 }
 
+/**
+ * ❓ Q: Why does this Cache class bring everything together?
+ * ✅ A: This is the main façade for users.
+ *     It hides complexity (storage, eviction, executor, read/write policy).
+ *     This design follows the Facade + Strategy patterns.
+ */
 class Cache<K, V> {
     private final CacheStorage<K, V> cache;
     private final DBStorage<K, V> db;
@@ -149,16 +208,19 @@ class Cache<K, V> {
         this.executor = new KeyBasedExecutor(pools);
     }
 
+    /**
+     * ❓ Q: Why return CompletableFuture instead of direct value?
+     * ✅ A: To support async operations.
+     *     In distributed systems, cache/DB reads may be network calls → async improves performance.
+     */
     public CompletableFuture<V> get(K key) {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 V value;
                 if (cache.containsKey(key)) {
-                    // Cache hit
                     value = cache.get(key);
                     eviction.keyAccessed(key);
                 } else {
-                    // Cache miss - read through to database
                     value = readPolicy.read(key, cache, db);
                     if (value != null) {
                         eviction.keyAccessed(key);
@@ -172,9 +234,12 @@ class Cache<K, V> {
         });
     }
 
+    /**
+     * ❓ Q: Why evict before writing new entry?
+     * ✅ A: To ensure cache never exceeds its capacity.
+     */
     public CompletableFuture<Void> put(K key, V value) {
         return executor.submit(() -> {
-            // Check if we need to evict before adding new item
             if (cache.size() >= cache.getCapacity()) {
                 K keyToEvict = eviction.evictKey();
                 if (keyToEvict != null) {
@@ -182,7 +247,6 @@ class Cache<K, V> {
                     cache.remove(keyToEvict);
                 }
             }
-
             writePolicy.write(key, value, cache, db);
             eviction.keyAccessed(key);
         }, key);
@@ -201,6 +265,11 @@ class Cache<K, V> {
     public void shutdown() { executor.shutdown(); }
 }
 
+/**
+ * ❓ Q: Why is main() needed in interview?
+ * ✅ A: To demonstrate working example of the designed system.
+ *     Interviewers usually ask to show test cases.
+ */
 public class CacheInterview {
     public static void main(String[] args) {
         CacheStorage<String, String> cache = new InMemoryCacheStorage<>(2);
@@ -213,55 +282,54 @@ public class CacheInterview {
                 cache, db, writePolicy, readPolicy, lru, 4
         );
 
-        // Initialize database
+        // Initialize DB
         db.write("1", "Apple");
         db.write("2", "Banana");
         db.write("3", "Cherry");
-        db.write("4", "Date"); // Added for completeness
+        db.write("4", "Date");
 
         System.out.println("=== Testing Read-Through Cache (Capacity: 2) ===");
         System.out.println("Initial DB contents: {1=Apple, 2=Banana, 3=Cherry, 4=Date}");
         System.out.println();
 
-        // Test read-through functionality
-        System.out.println("1. First access to key '1' (Cache Miss → Read from DB)");
+        System.out.println("1. First access to key '1' (Cache Miss → DB)");
         System.out.println("   Result: " + cacheSystem.get("1").join());
         System.out.println("   Cache state: " + getCacheState(cache));
         System.out.println();
 
-        System.out.println("2. First access to key '2' (Cache Miss → Read from DB)");
+        System.out.println("2. First access to key '2' (Cache Miss → DB)");
         System.out.println("   Result: " + cacheSystem.get("2").join());
         System.out.println("   Cache state: " + getCacheState(cache));
         System.out.println();
 
-        System.out.println("3. Access to key '1' again (Cache Hit)");
+        System.out.println("3. Access key '1' again (Cache Hit)");
         System.out.println("   Result: " + cacheSystem.get("1").join());
         System.out.println("   Cache state: " + getCacheState(cache));
         System.out.println();
 
-        System.out.println("4. First access to key '3' (Cache Full → Evict LRU key '2')");
+        System.out.println("4. Access key '3' (Cache Full → Evict LRU '2')");
         System.out.println("   Result: " + cacheSystem.get("3").join());
         System.out.println("   Cache state: " + getCacheState(cache));
         System.out.println();
 
-        System.out.println("5. Access to key '2' again (Cache Miss → Read from DB, Evict LRU key '1')");
+        System.out.println("5. Access key '2' again (Miss → DB, Evict '1')");
         System.out.println("   Result: " + cacheSystem.get("2").join());
         System.out.println("   Cache state: " + getCacheState(cache));
         System.out.println();
 
-        System.out.println("6. Access to non-existent key '5' (Not in DB)");
+        System.out.println("6. Access non-existent key '5'");
         System.out.println("   Result: " + cacheSystem.get("5").join());
         System.out.println("   Cache state: " + getCacheState(cache));
         System.out.println();
 
         System.out.println("=== Testing Write-Through Cache ===");
-        System.out.println("7. Updating existing key '1' (Write to Cache & DB, Evict LRU key '3')");
+        System.out.println("7. Update key '1' (Write Cache & DB, Evict '3')");
         cacheSystem.put("1", "Avocado").join();
         System.out.println("   Result: " + cacheSystem.get("1").join());
         System.out.println("   Cache state: " + getCacheState(cache));
         System.out.println();
 
-        System.out.println("8. Adding new key '4' (Write to Cache & DB, Evict LRU key '2')");
+        System.out.println("8. Add new key '4' (Write Cache & DB, Evict '2')");
         cacheSystem.put("4", "Date").join();
         System.out.println("   Result: " + cacheSystem.get("4").join());
         System.out.println("   Cache state: " + getCacheState(cache));
@@ -271,14 +339,7 @@ public class CacheInterview {
         cacheSystem.shutdown();
     }
 
-    // Helper method to get the current state of the cache
     private static String getCacheState(CacheStorage<String, String> cache) {
-        try {
-            // This is a bit of a hack since we don't have a way to iterate through the cache
-            // In a real implementation, we might add a method to get all keys
-            return "Cache contains " + cache.size() + " items";
-        } catch (Exception e) {
-            return "Error getting cache state";
-        }
+        return "Cache contains " + cache.size() + " items";
     }
 }
