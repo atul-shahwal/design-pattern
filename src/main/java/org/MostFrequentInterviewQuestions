@@ -1,0 +1,112 @@
+2. Common LLD Interview Problems
+These questions are often presented as "machine coding" challenges, where you're expected to write a detailed, production-quality design and some code.
+
+a. System & Application Design
+Parking Lot System: Design a system to manage a multi-level parking lot with different vehicle types.(Have Code)
+
+ATM Machine: Design the core components and interactions of an ATM, handling user input, transactions, and state.(Have Code)
+
+Vending Machine: Design a machine that accepts money, manages inventory, and dispenses products.(Have code)
+
+Splitwise (Expense Sharing): Design a system to track and settle debts among a group of friends.(have code)
+
+Movie Ticket Booking System: Design a system like BookMyShow, handling seat selection, reservations, and payment.(have code)
+
+Online Cab Booking (Uber/Ola): Design the system to handle ride requests, driver matching, and fare calculation.(need to check)
+
+b. Game Design
+Snake and Ladder Game: Design the classes for the board, player, and game logic. --> have code
+
+Tic-Tac-Toe Game: A classic problem to demonstrate state management and game-ending conditions. --> have code
+
+Chess Game: A more complex problem that tests your ability to handle complex rules and piece movements. --> have code
+
+Design an in-memory database with expiration time.(need to check for ttl based expiration)
+
+c. Core Components & Services
+Rate Limiter: Design a rate-limiting service to control the number of requests a user can make to an API.(Done)
+
+LRU Cache: Implement a Least Recently Used (LRU) cache from scratch. (Have Code).
+
+Job Scheduler: Design a system that can schedule and execute background tasks.(need to check)
+
+File System: Design the basic structure of a simplified file system with directories and files.(have code)
+
+Social Media Feed: Design the backend for a simple social media feed, considering factors like followers and post types(need to check)
+
+
+Online Cab Booking (Uber/Ola)
+This LLD problem requires you to design classes for users, drivers, rides, and a matching service. The key challenge is the real-time matching of riders to the nearest available driver.
+
+Key concepts to focus on:
+
+Location-based services: How to store and query location data efficiently.
+
+Matching algorithm: A core component that pairs riders with drivers. This often involves a search within a certain radius and can be optimized using spatial data structures like a Quadtree or Geohash.
+
+State management: Classes need to represent different states (e.g., RideStatus: REQUESTED, IN_PROGRESS, COMPLETED).
+
+Thread safety and concurrency: The system must handle multiple concurrent ride requests and driver updates.
+
+Appropriate resources:
+
+GeeksforGeeks: "Cab Booking System - Low-Level Design" provides a comprehensive breakdown of requirements, class diagrams, and database schemas.
+
+Medium: Search for articles titled "LLD/Machine Coding with Implementation: Cab Booking System" on platforms like Medium for code-based tutorials.
+
+In-Memory Database with TTL
+Designing a time-to-live (TTL) based in-memory database builds on the foundation of an LRU cache but adds a new layer of complexity: a mechanism to automatically expire entries.
+
+Key concepts to focus on:
+
+Data structures: A hash map for O(1) access and a min-heap or a sorted list to keep track of key expiration times. The min-heap is particularly useful as the item with the smallest expiration time (the one to be removed first) is always at the root.
+
+Lazy vs. Eager Expiration: Decide whether to check for expired items on every read (lazy expiration) or to have a background thread that periodically sweeps and removes them (eager expiration). A hybrid approach is often best.
+
+Thread safety: The data store and the expiration process must be thread-safe. You'll need to use locks or concurrent data structures.
+
+Appropriate resources:
+
+The Null Pointer Exception: "Design a TTL based in-memory cache in golang" gives a good overview of the design components and implementation in a code-centric format.
+
+Medium: Articles like "Building a High-Performance Java Cache with TTL, LRU, and Persistence" offer in-depth explanations and code examples.
+
+Job Scheduler
+A job scheduler's LLD design focuses on how to manage, prioritize, and execute tasks in a reliable and fault-tolerant manner. This is a great problem for demonstrating concurrency and state machine design.
+
+Key concepts to focus on:
+
+Job states: A job moves through various states: QUEUED, RUNNING, COMPLETED, FAILED, RETRYING.
+
+Priority Queue: A priority queue or a similar data structure is essential for picking the highest-priority job to execute next.
+
+Concurrency: The scheduler must be able to run multiple jobs concurrently using a thread pool.
+
+Fault tolerance: The system needs to handle failures, such as a job failing to complete. This involves a retry mechanism and robust logging.
+
+Appropriate resources:
+
+GeeksforGeeks: "Design Distributed Job Scheduler | System Design" covers both high-level and low-level design aspects.
+
+Medium: Articles like "LLD/Machine Coding with Implementation: 'Job Scheduling System — Real-Time'" provide detailed class diagrams and code to walk you through the implementation.
+
+Social Media Feed
+The LLD for a social media feed revolves around the challenge of fetching, ranking, and displaying content from a user's connections. The core design decision here is the "fanout" strategy.
+
+Key concepts to focus on:
+
+Data model: Design classes for User, Post, and Follower. The relationships between these classes are crucial.
+
+Fanout on Write (Push Model): When a user posts, the system pushes the new post to all of their followers' feeds. This is great for a large number of reads but is a scaling challenge for users with millions of followers.
+
+Fanout on Read (Pull Model): When a user logs in, the system fetches posts from all of their followed users and then sorts and displays them. This is simpler to implement but can be slow for users following many people.
+
+Hybrid approach: A common solution that combines both models to balance performance and scalability.
+
+Caching: Caching is critical for a low-latency feed.
+
+Appropriate resources:
+
+Javatechonline: "Social Media Feed System Design - Architecture, Algorithms & Best Practices" offers a solid overview of the various components and trade-offs.
+
+GeeksforGeeks: "Designing Instagram | System Design" is another excellent resource that dives into the LLD for a similar system, including fanout strategies and database design.

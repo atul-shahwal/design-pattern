@@ -1,0 +1,66 @@
+@startuml
+actor "Main Thread" as Main
+participant "ExecutorService" as Executor
+participant "Producer Thread" as Producer
+participant "BoundedBlockingQueue" as Queue
+participant "Consumer Thread" as Consumer
+
+Main -> Executor: Create thread pool (10 threads)
+Main -> Queue: Initialize with capacity=5
+
+loop 10 times [i=1 to 10]
+    Main -> Executor: submit(Producer Task with element=i)
+end
+
+activate Executor
+Executor -> Producer: execute()
+activate Producer
+
+Producer -> Queue: enqueue(element)
+activate Queue
+
+alt Queue is full
+    Producer -> Queue: await() on notFull condition
+    Queue --> Producer: [blocked until space available]
+end
+
+Queue -> Queue: queue.offer(element)
+Queue -> Consumer: signal() notEmpty condition
+Queue --> Producer: return
+deactivate Queue
+
+Producer --> Executor: Task completed
+deactivate Producer
+
+Main -> Main: Sleep 500ms
+
+loop 10 times [i=1 to 10]
+    Main -> Executor: submit(Consumer Task)
+end
+
+Executor -> Consumer: execute()
+activate Consumer
+
+Consumer -> Queue: dequeue()
+activate Queue
+
+alt Queue is empty
+    Consumer -> Queue: await() on notEmpty condition
+    Queue --> Consumer: [blocked until elements available]
+end
+
+Queue -> Queue: queue.poll()
+Queue -> Producer: signal() notFull condition
+Queue --> Consumer: return element
+deactivate Queue
+
+Consumer --> Executor: Task completed
+deactivate Consumer
+
+Main -> Queue: size()
+activate Queue
+Queue --> Main: return current size
+deactivate Queue
+
+Main -> Executor: shutdown()
+@enduml

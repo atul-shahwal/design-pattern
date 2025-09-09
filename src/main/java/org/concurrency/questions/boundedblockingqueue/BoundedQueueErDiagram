@@ -1,0 +1,134 @@
+@startuml
+!theme plain
+
+class BoundedBlockingQueue {
+  - queue: Queue<Integer>
+  - capacity: int
+  - lock: ReentrantLock
+  - notFull: Condition
+  - notEmpty: Condition
+
+  + BoundedBlockingQueue(capacity: int)
+  + enqueue(element: int): void
+  + dequeue(): int
+  + size(): int
+  + tryEnqueue(element: int, timeoutMs: long): boolean
+}
+
+class BoundedBlockingQueueTest {
+  + main(args: String[]): void
+}
+
+BoundedBlockingQueueTest --> BoundedBlockingQueue : uses
+
+note top of BoundedBlockingQueue
+  **Thread-safe bounded blocking queue implementation**
+
+  Uses ReentrantLock and Condition variables for
+  producer-consumer synchronization with:
+  - Capacity bounding for backpressure
+  - Precise signaling with two condition variables
+  - Protection against spurious wakeups
+  - Guaranteed lock release via finally blocks
+end note
+
+note as N1
+  **enqueue(int element)**
+
+  Adds element to queue, blocking if full
+
+  **Implementation:**
+  1. Acquire lock
+  2. Wait while queue is full (prevents spurious wakeups)
+  3. Add element to queue
+  4. Signal that queue is no longer empty
+  5. Release lock in finally block
+
+  **Interview Q: Why use while loop instead of if?**
+  A: While loops prevent "spurious wakeups" where threads
+     wake up without being signaled, ensuring we recheck
+     the condition before proceeding.
+end note
+
+BoundedBlockingQueue .. N1
+
+note as N2
+  **dequeue(): int**
+
+  Removes and returns element, blocking if empty
+
+  **Implementation:**
+  1. Acquire lock
+  2. Wait while queue is empty
+  3. Remove element from queue
+  4. Signal that queue is no longer full
+  5. Release lock in finally block
+
+  **Interview Q: Why return primitive int?**
+  A: The blocking guarantee ensures the queue won't be empty
+     when we dequeue, so we can safely return a primitive
+     without null concerns.
+end note
+
+BoundedBlockingQueue .. N2
+
+note as N3
+  **size(): int**
+
+  Returns current number of elements in queue
+
+  **Implementation:**
+  1. Acquire lock
+  2. Get current queue size
+  3. Release lock in finally block
+
+  **Interview Q: Why is locking needed for size()?**
+  A: To ensure thread-safe access and prevent inconsistent
+     views of queue size during concurrent modifications.
+end note
+
+BoundedBlockingQueue .. N3
+
+note as N4
+  **tryEnqueue(int element, long timeoutMs): boolean**
+
+  Attempts to add element with timeout support
+
+  **Implementation:**
+  1. Acquire lock
+  2. Wait with timeout while queue is full
+  3. Add element if space becomes available
+  4. Signal that queue is no longer empty
+  5. Release lock in finally block
+
+  **Interview Q: Why add timeout support?**
+  A: To avoid indefinite blocking and allow for graceful
+     degradation when the system is under heavy load.
+
+  **Interview Q: How does this help with system resilience?**
+  A: Timeouts prevent thread starvation and system deadlock
+     by ensuring operations eventually complete.
+
+  **Interview Q: What are use cases for timed operations?**
+  A: 1. Real-time systems with strict latency requirements
+     2. Services with SLAs that require response time guarantees
+     3. Systems that need to gracefully handle overload
+end note
+
+BoundedBlockingQueue .. N4
+
+note as N5
+  **BoundedBlockingQueueTest**
+
+  Demonstrates producer-consumer pattern with bounded queue
+
+  **Test Approach:**
+  1. Creates bounded queue with capacity 5
+  2. Uses ExecutorService with 10 threads
+  3. AtomicInteger for thread-safe counting
+  4. 10 producer threads enqueue elements
+  5. 10 consumer threads dequeue elements
+end note
+
+BoundedBlockingQueueTest .. N5
+@enduml
