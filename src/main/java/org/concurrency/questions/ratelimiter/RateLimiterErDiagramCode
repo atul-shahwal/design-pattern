@@ -5,12 +5,12 @@ title Rate Limiter - Class/ER Diagram
 '----------------------
 ' Interfaces
 '----------------------
-interface IRateLimiter {
+interface RateLimiterStrategy {
     + giveAccess(key: String): boolean
     + updateConfiguration(config: Map<String, Object>)
     + shutdown()
 }
-note right of IRateLimiter
+note right of RateLimiterStrategy
   Strategy Pattern: Defines interface for all rate limiting algorithms
   Supports interchangeable implementations (Token Bucket, Fixed Window, etc.)
 end note
@@ -59,17 +59,17 @@ note right of Bucket
 end note
 
 class RateLimiterFactory {
-    - limiterFactories: Map<RateLimiterType, Function<Map<String,Object>, IRateLimiter>>
-    + createLimiter(type: RateLimiterType, config: Map<String,Object>): IRateLimiter
+    - limiterFactories: Map<RateLimiterType, Function<Map<String,Object>, RateLimiterStrategy>>
+    + createLimiter(type: RateLimiterType, config: Map<String,Object>): RateLimiterStrategy
     + registerLimiterFactory(type, factory)
 }
 note right of RateLimiterFactory
-  Factory Pattern: Creates instances of IRateLimiter
+  Factory Pattern: Creates instances of RateLimiterStrategy
   Centralizes object creation
 end note
 
 class RateLimiterController {
-    - rateLimiter: IRateLimiter
+    - rateLimiter: RateLimiterStrategy
     - executor: ExecutorService
     + processRequest(key: String): CompletableFuture<Boolean>
     + updateConfiguration(config: Map<String,Object>)
@@ -83,8 +83,8 @@ end note
 '----------------------
 ' Relationships
 '----------------------
-IRateLimiter <|.. TokenBucketStrategy
+RateLimiterStrategy <|.. TokenBucketStrategy
 TokenBucketStrategy *-- Bucket : "has a"
-RateLimiterController o-- IRateLimiter : "uses"
+RateLimiterController o-- RateLimiterStrategy : "uses"
 RateLimiterController o-- RateLimiterFactory : "uses"
 @enduml

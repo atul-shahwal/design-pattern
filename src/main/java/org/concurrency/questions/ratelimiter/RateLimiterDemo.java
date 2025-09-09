@@ -29,17 +29,35 @@ import java.util.function.Function;
  * 3. Scheduled task refills tokens at fixed intervals.
  */
 
-interface IRateLimiter {
+/**
+ * Q: Why do we define an interface for rate limiter strategies?
+ * A: To support multiple algorithms (Token Bucket, Fixed Window, Sliding Window) using the Strategy Pattern.
+ *
+ * Q: How does this help in extensibility?
+ * A: New algorithms can be added without modifying client code, just by implementing this interface.
+ */
+interface RateLimiterStrategy {
     boolean giveAccess(String rateLimitKey);
+
+    /**
+     * Q: Why allow dynamic config updates?
+     * A: So limits can be tuned at runtime without restarting the service.
+     */
     void updateConfiguration(Map<String, Object> config);
+
+    /**
+     * Q: Why provide a shutdown hook here?
+     * A: To stop background threads (like token refill schedulers) and free resources.
+     */
     void shutdown();
 }
 
-// ===============================
-// 2. RateLimiterType Enum
-// ===============================
 /**
- * Enumeration of supported rate limiter types.
+ * Q: Why do we use an enum here?
+ * A: To define the supported algorithms in a type-safe way.
+ *
+ * Q: Why not just use strings for algorithm names?
+ * A: Enums reduce runtime errors, provide compile-time safety, and are easier to maintain.
  */
 enum RateLimiterType {
     TOKEN_BUCKET,
@@ -48,14 +66,14 @@ enum RateLimiterType {
     LEAKY_BUCKET
 }
 
-// ===============================
-// 3. TokenBucketStrategy Class (Strategy Implementation)
-// ===============================
 /**
- * Token Bucket algorithm implementation.
- * Supports both global and per-user rate limiting.
+ * Q: Why Token Bucket algorithm?
+ * A: It allows burst traffic while maintaining an average rate, which is widely useful in APIs.
+ *
+ * Q: Why maintain both global and per-user buckets?
+ * A: To enforce global throttling as well as fair usage for individual users.
  */
-class TokenBucketStrategy implements IRateLimiter {
+class TokenBucketStrategy implements RateLimiterStrategy {
     private final int bucketCapacity;
     private volatile int refreshRate;
     private final Bucket globalBucket;
@@ -64,8 +82,11 @@ class TokenBucketStrategy implements IRateLimiter {
     private final long refillIntervalMillis;
 
     /**
-     * Inner class representing an individual token bucket.
-     * Uses ReentrantLock for thread-safe operations.
+     * Q: Why inner Bucket class?
+     * A: To encapsulate token count and locking logic in one place.
+     *
+     * Q: Why ReentrantLock instead of synchronized?
+     * A: It provides finer-grained control and better performance under contention.
      */
     private class Bucket {
         private int tokens;
@@ -75,6 +96,10 @@ class TokenBucketStrategy implements IRateLimiter {
             this.tokens = initialTokens;
         }
 
+        /**
+         * Q: Why lock here?
+         * A: Multiple threads may consume tokens concurrently; locking ensures correctness.
+         */
         public boolean tryConsume() {
             lock.lock();
             try {
@@ -88,6 +113,10 @@ class TokenBucketStrategy implements IRateLimiter {
             }
         }
 
+        /**
+         * Q: Why use Math.min when refilling?
+         * A: To ensure tokens never exceed bucket capacity.
+         */
         public void refill() {
             lock.lock();
             try {
@@ -98,6 +127,10 @@ class TokenBucketStrategy implements IRateLimiter {
         }
     }
 
+    /**
+     * Q: Why store refreshRate as volatile?
+     * A: So updates to refreshRate are visible across threads without extra synchronization.
+     */
     public TokenBucketStrategy(int bucketCapacity, int refreshRate) {
         this.bucketCapacity = bucketCapacity;
         this.refreshRate = refreshRate;
@@ -108,6 +141,10 @@ class TokenBucketStrategy implements IRateLimiter {
         startRefillTask();
     }
 
+    /**
+     * Q: Why use ScheduledExecutorService here?
+     * A: It allows periodic background refill without blocking request threads.
+     */
     private void startRefillTask() {
         scheduler.scheduleAtFixedRate(() -> {
             globalBucket.refill();
@@ -141,14 +178,15 @@ class TokenBucketStrategy implements IRateLimiter {
     }
 }
 
-// ===============================
-// 4. RateLimiterFactory Class (Factory Pattern)
-// ===============================
 /**
- * Factory class that creates rate limiter instances.
+ * Q: Why use a Factory Pattern here?
+ * A: To create different rate limiter strategies based on type without exposing constructor logic.
+ *
+ * Q: How can we extend this?
+ * A: Register new limiter algorithms dynamically with `registerLimiterFactory`.
  */
 class RateLimiterFactory {
-    private static final Map<RateLimiterType, Function<Map<String, Object>, IRateLimiter>> limiterFactories = new HashMap<>();
+    private static final Map<RateLimiterType, Function<Map<String, Object>, RateLimiterStrategy>> limiterFactories = new HashMap<>();
 
     static {
         limiterFactories.put(RateLimiterType.TOKEN_BUCKET, config -> {
@@ -164,8 +202,8 @@ class RateLimiterFactory {
         });
     }
 
-    public static IRateLimiter createLimiter(RateLimiterType type, Map<String, Object> config) {
-        Function<Map<String, Object>, IRateLimiter> factory = limiterFactories.get(type);
+    public static RateLimiterStrategy createLimiter(RateLimiterType type, Map<String, Object> config) {
+        Function<Map<String, Object>, RateLimiterStrategy> factory = limiterFactories.get(type);
         if (factory == null) {
             throw new IllegalArgumentException("Unsupported rate limiter type: " + type);
         }
@@ -173,19 +211,20 @@ class RateLimiterFactory {
     }
 
     public static void registerLimiterFactory(RateLimiterType type,
-                                              Function<Map<String, Object>, IRateLimiter> factory) {
+                                              Function<Map<String, Object>, RateLimiterStrategy> factory) {
         limiterFactories.put(type, factory);
     }
 }
 
-// ===============================
-// 5. RateLimiterController Class (Facade Pattern)
-// ===============================
 /**
- * Controller that delegates incoming requests to a rate limiter.
+ * Q: Why use a Controller here?
+ * A: To provide a facade over strategies and centralize request handling.
+ *
+ * Q: Why use ExecutorService for async requests?
+ * A: It simulates concurrent clients and prevents blocking the main thread.
  */
 class RateLimiterController {
-    private final IRateLimiter rateLimiter;
+    private final RateLimiterStrategy rateLimiter;
     private final ExecutorService executor;
 
     public RateLimiterController(RateLimiterType type, Map<String, Object> config,
@@ -194,6 +233,10 @@ class RateLimiterController {
         this.executor = executorService;
     }
 
+    /**
+     * Q: Why return CompletableFuture<Boolean>?
+     * A: It makes the API async, non-blocking, and easy to compose in real-world systems.
+     */
     public CompletableFuture<Boolean> processRequest(String rateLimitKey) {
         return CompletableFuture.supplyAsync(() -> {
             boolean allowed = rateLimiter.giveAccess(rateLimitKey);
@@ -214,12 +257,12 @@ class RateLimiterController {
     }
 }
 
-// ===============================
-// 6. Main Demo Class
-// ===============================
+/**
+ * Q: Why include a demo class in design questions?
+ * A: To show usage patterns, edge cases, and concurrency behavior.
+ */
 public class RateLimiterDemo {
     public static void main(String[] args) {
-        // Configuration
         Map<String, Object> config = new HashMap<>();
         config.put("capacity", 5);
         config.put("refreshRate", 1);
@@ -228,7 +271,6 @@ public class RateLimiterDemo {
         RateLimiterController controller = new RateLimiterController(
                 RateLimiterType.TOKEN_BUCKET, config, executor);
 
-        // Demo scenarios
         demoGlobalLimiting(controller);
         demoPerUserLimiting(controller);
         demoConcurrentRequests(controller);
