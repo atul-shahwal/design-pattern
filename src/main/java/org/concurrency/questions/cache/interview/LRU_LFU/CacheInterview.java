@@ -125,7 +125,7 @@ class InMemoryCacheStorage<K, V> implements CacheStorage<K, V> {
  * In real systems, it could be replaced with MySQL, MongoDB, etc.
  */
 class SimpleDBStorage<K, V> implements DBStorage<K, V> {
-    private final Map<K, V> db = new ConcurrentHashMap<>();
+    private final Map<K, V> db = new HashMap<>();
     public void write(K key, V value) { db.put(key, value); }
     public V read(K key) { return db.get(key); }
     public void delete(K key) { db.remove(key); }
