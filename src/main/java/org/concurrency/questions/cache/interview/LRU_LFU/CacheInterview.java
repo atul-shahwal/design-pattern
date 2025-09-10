@@ -149,9 +149,14 @@ class WriteThroughPolicy<K, V> implements WritePolicy<K, V> {
  */
 class ReadThroughPolicy<K, V> implements ReadPolicy<K, V> {
     public V read(K key, CacheStorage<K, V> cache, DBStorage<K, V> db) {
-        V value = db.read(key);
-        if (value != null) {
-            cache.put(key, value);
+        V value = cache.get(key);
+        if (value == null) {
+            // Cache miss – read from database
+            value = db.read(key);
+            if (value != null) {
+                // Update cache with value from database
+                cache.put(key, value);
+            }
         }
         return value;
     }
