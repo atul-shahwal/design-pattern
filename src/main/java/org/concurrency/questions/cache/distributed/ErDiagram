@@ -1,0 +1,143 @@
+@startuml
+title Distributed Cache System - ER Diagram with Notes
+
+class Node {
+    - String id
+    + Node(host:String, port:int)
+    + getId(): String
+    + toString(): String
+}
+note right of Node
+Represents a physical cache node (master or replica)
+getId(): returns node identifier
+toString(): returns node as "host:port"
+end note
+
+class Cache<K,V> {
+    - CacheStorage<K,V> cache
+    - DBStorage<K,V> db
+    - WritePolicy<K,V> writePolicy
+    - ReadPolicy<K,V> readPolicy
+    - EvictionAlgorithm<K> eviction
+    - KeyBasedExecutor executor
+    + get(K): CompletableFuture<V>
+    + put(K,V): CompletableFuture<Void>
+    + shutdown(): void
+    + internalState(): Map<K,V>
+}
+note right of Cache
+Represents a local cache layer
+get(K): returns value asynchronously using ReadPolicy
+put(K,V): writes value asynchronously using WritePolicy
+shutdown(): shuts down key-based executors
+internalState(): returns current cache content for debugging
+end note
+
+class NodeCache<K,V> {
+    - Cache<K,V> master
+    - List<Cache<K,V>> replicas
+    - ExecutorService executor
+    + put(K,V): void
+    + get(K): V
+    + internalState(): Map<K,V>
+    + getReplicas(): List<Cache<K,V>>
+    + shutdown(): void
+}
+note right of NodeCache
+Represents master + replica caches
+put(K,V): writes to master and asynchronously replicates to replicas
+get(K): reads from master; falls back to replicas if master fails
+internalState(): returns combined state of master and replicas
+shutdown(): shuts down master, replicas, and executor
+end note
+
+class CacheStorage<K,V> {
+    + put(K,V)
+    + get(K)
+    + remove(K)
+    + containsKey(K)
+    + size(): int
+    + getCapacity(): int
+    + keySet(): Set<K>
+}
+note right of CacheStorage
+Abstract interface for in-memory cache
+Implementations: InMemoryCacheStorage
+Provides basic CRUD operations and capacity info
+end note
+
+class DBStorage<K,V> {
+    + write(K,V)
+    + read(K): V
+    + delete(K)
+}
+note right of DBStorage
+Abstract interface for persistent storage
+Implementations: SimpleDBStorage
+Provides basic CRUD operations
+end note
+
+class WritePolicy<K,V> {
+    + write(K,V, CacheStorage<K,V>, DBStorage<K,V>)
+}
+note right of WritePolicy
+Defines strategy for writing data
+Implementations: WriteThroughPolicy
+write(): writes to cache and DB synchronously
+end note
+
+class ReadPolicy<K,V> {
+    + read(K, CacheStorage<K,V>, DBStorage<K,V>): V
+}
+note right of ReadPolicy
+Defines strategy for reading data
+Implementations: ReadThroughPolicy
+read(): reads from cache; falls back to DB if missing
+end note
+
+class EvictionAlgorithm<K> {
+    + keyAccessed(K)
+    + evictKey(): K
+}
+note right of EvictionAlgorithm
+Defines eviction logic
+Implementations: LRUEvictionAlgorithm
+keyAccessed(): updates LRU order
+evictKey(): returns key to evict when cache is full
+end note
+
+class KeyBasedExecutor {
+    + submit(Runnable, key): CompletableFuture<Void>
+    + submit(Callable<V>, key): CompletableFuture<V>
+    + shutdown()
+}
+note right of KeyBasedExecutor
+Serializes operations per key to avoid race conditions
+submit(): schedules task on a thread specific to the key
+shutdown(): shuts down all executors
+end note
+
+class ConsistentHashing {
+    - SortedMap<Integer, Node> circle
+    - int virtualNodeCount
+    - HashFunction hashFunction
+    + addNode(Node)
+    + getNode(key): Node
+}
+note right of ConsistentHashing
+Distributes keys across nodes using virtual nodes
+addNode(): adds node with multiple virtual nodes
+getNode(): returns node responsible for a given key
+end note
+
+NodeCache "1" --> "1" Cache : master
+NodeCache "1" --> "*" Cache : replicas
+Cache "1" --> "1" CacheStorage
+Cache "1" --> "1" DBStorage
+Cache "1" --> "1" WritePolicy
+Cache "1" --> "1" ReadPolicy
+Cache "1" --> "1" EvictionAlgorithm
+Cache "1" --> "1" KeyBasedExecutor
+ConsistentHashing --> Node
+
+@enduml

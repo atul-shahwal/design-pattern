@@ -1,0 +1,117 @@
+@startuml
+title Cache System - Storage, Policy, Eviction & Executor
+
+' Storage Interfaces
+interface CacheStorage<K,V> {
+    + put(K,V)
+    + get(K):V
+    + remove(K)
+    + containsKey(K):boolean
+    + size():int
+    + getCapacity():int
+    + keySet():Set<K>
+}
+note right of CacheStorage
+Handles cache data storage operations.
+Can be implemented as in-memory or external storage.
+end note
+
+interface DBStorage<K,V> {
+    + write(K,V)
+    + read(K):V
+    + delete(K)
+}
+note right of DBStorage
+Persistent storage ensuring data durability.
+end note
+
+' Policy Interfaces
+interface WritePolicy<K,V> {
+    + write(K,V,CacheStorage<K,V>,DBStorage<K,V>)
+}
+note right of WritePolicy
+Defines how writes are handled.
+Example: Write-through writes to both cache & DB.
+end note
+
+interface ReadPolicy<K,V> {
+    + read(K,CacheStorage<K,V>,DBStorage<K,V>):V
+}
+note right of ReadPolicy
+Defines read behavior.
+Example: Read-through fetches from DB on cache miss.
+end note
+
+' Eviction Algorithm
+interface EvictionAlgorithm<K> {
+    + keyAccessed(K)
+    + evictKey():K
+}
+note right of EvictionAlgorithm
+Eviction strategies when capacity is exceeded.
+Examples: LRU, LFU, FIFO.
+end note
+
+class LRUEvictionAlgorithm<K> {
+    + keyAccessed(K)
+    + evictKey():K
+}
+note right of LRUEvictionAlgorithm
+Evicts least recently used entry.
+Uses LinkedHashMap to track access order.
+end note
+
+class LFUEvictionAlgorithm<K> {
+    + keyAccessed(K)
+    + evictKey():K
+}
+note right of LFUEvictionAlgorithm
+Evicts least frequently used entry.
+Tracks frequency using maps and sets.
+end note
+
+' Executor
+class KeyBasedExecutor {
+    + submit(Runnable,Object): CompletableFuture<Void>
+    + submit(Callable<V>,Object): CompletableFuture<V>
+    + shutdown()
+}
+note right of KeyBasedExecutor
+Ensures per-key thread safety.
+Serializes operations by key to avoid concurrency issues.
+end note
+
+' Cache Main Class
+class Cache<K,V> {
+    + get(K): CompletableFuture<V>
+    + put(K,V): CompletableFuture<Void>
+    + shutdown()
+}
+note right of Cache
+Facade combining storage, eviction, policies, and executor.
+Handles async cache operations with thread safety.
+end note
+
+class CacheInterview {
+    + main(String[]): void
+}
+note right of CacheInterview
+Demonstrates functionality for interview tests.
+Validates eviction, read/write behaviors.
+end note
+
+' Relationships
+Cache --> CacheStorage
+Cache --> DBStorage
+Cache --> WritePolicy
+Cache --> ReadPolicy
+Cache --> EvictionAlgorithm
+Cache --> KeyBasedExecutor
+
+CacheStorage <|.. InMemoryCacheStorage
+DBStorage <|.. SimpleDBStorage
+WritePolicy <|.. WriteThroughPolicy
+ReadPolicy <|.. ReadThroughPolicy
+EvictionAlgorithm <|.. LRUEvictionAlgorithm
+EvictionAlgorithm <|.. LFUEvictionAlgorithm
+@enduml

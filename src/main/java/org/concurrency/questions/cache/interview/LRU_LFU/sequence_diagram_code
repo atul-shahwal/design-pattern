@@ -1,0 +1,63 @@
+@startuml
+title Sequence Diagram - Cache Read/Write with LRU Eviction
+
+actor User
+participant "Cache (Facade)" as Cache
+participant "InMemoryCacheStorage" as CacheStorage
+participant "SimpleDBStorage" as DB
+participant "LRUEvictionAlgorithm" as LRU
+participant "KeyBasedExecutor" as Executor
+
+User -> Cache: get("1")
+Cache -> Executor: submit(task for "1")
+Executor -> Cache: run task
+Cache -> CacheStorage: containsKey("1")
+CacheStorage -> Cache: false
+Cache -> DB: read("1")
+DB -> Cache: "Apple"
+Cache -> CacheStorage: put("1","Apple")
+Cache -> LRU: keyAccessed("1")
+Cache -> Executor: return "Apple"
+Executor -> User: return "Apple"
+
+User -> Cache: get("2")
+Cache -> Executor: submit(task for "2")
+Executor -> Cache: run task
+Cache -> CacheStorage: containsKey("2")
+CacheStorage -> Cache: false
+Cache -> DB: read("2")
+DB -> Cache: "Banana"
+Cache -> CacheStorage: put("2","Banana")
+Cache -> LRU: keyAccessed("2")
+Cache -> Executor: return "Banana"
+Executor -> User: return "Banana"
+
+User -> Cache: get("1")
+Cache -> Executor: submit(task for "1")
+Executor -> Cache: run task
+Cache -> CacheStorage: containsKey("1")
+CacheStorage -> Cache: true
+Cache -> CacheStorage: get("1")
+CacheStorage -> Cache: "Apple"
+Cache -> LRU: keyAccessed("1")
+Cache -> Executor: return "Apple"
+Executor -> User: return "Apple"
+
+User -> Cache: get("3")
+Cache -> Executor: submit(task for "3")
+Executor -> Cache: run task
+Cache -> CacheStorage: containsKey("3")
+CacheStorage -> Cache: false
+Cache -> DB: read("3")
+DB -> Cache: "Cherry"
+Cache -> CacheStorage: put("3","Cherry")
+Cache -> LRU: keyAccessed("3")
+Cache -> CacheStorage: size()
+CacheStorage -> Cache: 2
+Cache -> LRU: evictKey()
+LRU -> Cache: "2"
+Cache -> CacheStorage: remove("2")
+CacheStorage -> Cache: done
+Cache -> Executor: return "Cherry"
+Executor -> User: return "Cherry"
+@enduml
