@@ -1,4 +1,4 @@
-package org.concurrency.questions.cache.interview;
+package org.concurrency.questions.cache.interview.LRU_LFU;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -182,6 +182,100 @@ class LRUEvictionAlgorithm<K> implements EvictionAlgorithm<K> {
         }
     }
 }
+// only Implement when asked
+class LFUEvictionAlgorithm<K> implements EvictionAlgorithm<K> {
+    /**
+     * ❓ Q: Why use multiple data structures (keyToFreq, freqToKeys, TreeSet) for LFU?
+     * ✅ A:
+     * - keyToFreq: Tracks current frequency of each key for O(1) access.
+     * - freqToKeys: Groups keys by frequency to quickly access all keys at a certain frequency.
+     * - TreeSet: Maintains frequencies in sorted order to efficiently find the minimum frequency for eviction.
+     * This structure ensures O(1) access for key updates and O(log n) eviction due to the TreeSet.
+     */
+    private final Map<K, Integer> keyToFreq;
+    private final Map<Integer, LinkedHashSet<K>> freqToKeys;
+    private final TreeSet<Integer> frequencies;
+    private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+
+    public LFUEvictionAlgorithm() {
+        keyToFreq = new HashMap<>();
+        freqToKeys = new HashMap<>();
+        frequencies = new TreeSet<>();
+    }
+
+
+
+    /**
+     * ❓ Q: How does key access update frequency while maintaining O(1) complexity?
+     * ✅ A:
+     * 1. For existing keys:
+     *    - Remove key from current frequency group (O(1) using hash map lookup).
+     *    - Increment frequency and add to new group (O(1) for map operations, O(log n) for TreeSet update).
+     * 2. For new keys: Initialize frequency to 1 and add to corresponding groups (O(1) for maps, O(log n) for TreeSet).
+     */
+    @Override
+    public void keyAccessed(K key) {
+        lock.writeLock().lock();
+        try {
+            if (keyToFreq.containsKey(key)) {
+                // Existing key: update frequency
+                int oldFreq = keyToFreq.get(key);
+                int newFreq = oldFreq + 1;
+                keyToFreq.put(key, newFreq);
+
+                // Remove from old frequency set
+                LinkedHashSet<K> oldSet = freqToKeys.get(oldFreq);
+                oldSet.remove(key);
+                if (oldSet.isEmpty()) {
+                    freqToKeys.remove(oldFreq);
+                    frequencies.remove(oldFreq);
+                }
+
+                // Add to new frequency set
+                freqToKeys.computeIfAbsent(newFreq, k -> new LinkedHashSet<>()).add(key);
+                frequencies.add(newFreq);
+            } else {
+                // New key: initialize frequency
+                keyToFreq.put(key, 1);
+                freqToKeys.computeIfAbsent(1, k -> new LinkedHashSet<>()).add(key);
+                frequencies.add(1);
+            }
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
+    /**
+     * ❓ Q: Why evict from the smallest frequency group, and how is LRU handled within the same frequency?
+     * ✅ A:
+     * - LFU evicts keys with the smallest frequency (frequencies.first() from TreeSet).
+     * - Within the same frequency, LinkedHashSet preserves insertion order. The first element in the set (iterator.next()) is the least recently used in that frequency group.
+     */
+    @Override
+    public K evictKey() {
+        lock.writeLock().lock();
+        try {
+            if (frequencies.isEmpty()) {
+                return null;
+            }
+
+            int minFreq = frequencies.first();
+            LinkedHashSet<K> set = freqToKeys.get(minFreq);
+            K keyToEvict = set.iterator().next();
+
+            // Remove key from all structures
+            set.remove(keyToEvict);
+            keyToFreq.remove(keyToEvict);
+            if (set.isEmpty()) {
+                freqToKeys.remove(minFreq);
+                frequencies.remove(minFreq);
+            }
+            return keyToEvict;
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+}
 
 /**
  * ❓ Q: Why use KeyBasedExecutor instead of a global thread pool?
@@ -296,14 +390,74 @@ class Cache<K, V> {
  */
 public class CacheInterview {
     public static void main(String[] args) {
+        // Lru test case
+//        CacheStorage<String, String> cache = new InMemoryCacheStorage<>(2);
+//        DBStorage<String, String> db = new SimpleDBStorage<>();
+//        WritePolicy<String, String> writePolicy = new WriteThroughPolicy<>();
+//        ReadPolicy<String, String> readPolicy = new ReadThroughPolicy<>();
+//        EvictionAlgorithm<String> lru = new LRUEvictionAlgorithm<>();
+//
+//        Cache<String, String> cacheSystem = new Cache<>(
+//                cache, db, writePolicy, readPolicy, lru, 4
+//        );
+//
+//        // Initialize DB with some data
+//        db.write("1", "Apple");
+//        db.write("2", "Banana");
+//        db.write("3", "Cherry");
+//
+//        System.out.println("=== Testing Read-Through & Eviction (Capacity: 2) ===");
+//        printSystemState(cache, db);
+//
+//        System.out.println("1. First access to key '1' (Cache Miss -> DB)");
+//        System.out.println("   Result: " + cacheSystem.get("1").join());
+//        printSystemState(cache, db);
+//
+//        System.out.println("2. First access to key '2' (Cache Miss -> DB)");
+//        System.out.println("   Result: " + cacheSystem.get("2").join());
+//        printSystemState(cache, db);
+//
+//        System.out.println("3. Access key '1' again (Cache Hit)");
+//        System.out.println("   Result: " + cacheSystem.get("1").join());
+//        printSystemState(cache, db);
+//
+//        System.out.println("4. Access key '3' (Cache Full -> Evict LRU '2')");
+//        System.out.println("   Result: " + cacheSystem.get("3").join());
+//        printSystemState(cache, db);
+//
+//        System.out.println("5. Access key '2' again (Miss -> DB, Evict '1')");
+//        System.out.println("   Result: " + cacheSystem.get("2").join());
+//        printSystemState(cache, db);
+//
+//        System.out.println("6. Access non-existent key '5' (Read Miss, not in DB)");
+//        System.out.println("   Result: " + cacheSystem.get("5").join());
+//        printSystemState(cache, db);
+//
+//        System.out.println("=== Testing Write-Through on New Key ===");
+//        // The key '10' does not exist in the database initially
+//        String newKey = "10";
+//        String newValue = "Watermelon";
+//        System.out.println("7. Put new key '" + newKey + "' into cache...");
+//        cacheSystem.put(newKey, newValue).join();
+//
+//        System.out.println("   Verifying key '" + newKey + "' exists in cache and DB...");
+//        System.out.println("   Cache check: " + ((InMemoryCacheStorage) cache).containsKey(newKey));
+//        System.out.println("   DB check: " + (db.read(newKey) != null));
+//        System.out.println("   DB value: " + db.read(newKey));
+//        printSystemState(cache, db);
+
+//        cacheSystem.shutdown();
+
+
+        // LFU Test
         CacheStorage<String, String> cache = new InMemoryCacheStorage<>(2);
         DBStorage<String, String> db = new SimpleDBStorage<>();
         WritePolicy<String, String> writePolicy = new WriteThroughPolicy<>();
         ReadPolicy<String, String> readPolicy = new ReadThroughPolicy<>();
-        EvictionAlgorithm<String> lru = new LRUEvictionAlgorithm<>();
+        EvictionAlgorithm<String> lfu = new LFUEvictionAlgorithm<>();
 
         Cache<String, String> cacheSystem = new Cache<>(
-                cache, db, writePolicy, readPolicy, lru, 4
+                cache, db, writePolicy, readPolicy, lfu, 4
         );
 
         // Initialize DB with some data
@@ -311,45 +465,41 @@ public class CacheInterview {
         db.write("2", "Banana");
         db.write("3", "Cherry");
 
-        System.out.println("=== Testing Read-Through & Eviction (Capacity: 2) ===");
+        System.out.println("=== Testing LFU Eviction (Capacity: 2) ===");
         printSystemState(cache, db);
 
-        System.out.println("1. First access to key '1' (Cache Miss -> DB)");
+        System.out.println("1. Access key '1' (Cache Miss -> DB, freq=1)");
         System.out.println("   Result: " + cacheSystem.get("1").join());
         printSystemState(cache, db);
 
-        System.out.println("2. First access to key '2' (Cache Miss -> DB)");
+        System.out.println("2. Access key '2' (Cache Miss -> DB, freq=1)");
         System.out.println("   Result: " + cacheSystem.get("2").join());
         printSystemState(cache, db);
 
-        System.out.println("3. Access key '1' again (Cache Hit)");
+        System.out.println("3. Access key '1' again (Cache Hit, freq=2)");
         System.out.println("   Result: " + cacheSystem.get("1").join());
         printSystemState(cache, db);
 
-        System.out.println("4. Access key '3' (Cache Full -> Evict LRU '2')");
+        System.out.println("4. Access key '3' (Cache Full -> Evict '2' (freq=1))");
         System.out.println("   Result: " + cacheSystem.get("3").join());
         printSystemState(cache, db);
 
-        System.out.println("5. Access key '2' again (Miss -> DB, Evict '1')");
+        System.out.println("5. Access key '1' again (Cache Hit, freq=3)");
+        System.out.println("   Result: " + cacheSystem.get("1").join());
+        printSystemState(cache, db);
+
+        System.out.println("6. Access key '3' again (Cache Hit, freq=2)");
+        System.out.println("   Result: " + cacheSystem.get("3").join());
+        printSystemState(cache, db);
+
+        System.out.println("7. Access key '2' again (Miss -> DB, Cache Full -> Evict '3' (freq=2))");
         System.out.println("   Result: " + cacheSystem.get("2").join());
         printSystemState(cache, db);
 
-        System.out.println("6. Access non-existent key '5' (Read Miss, not in DB)");
-        System.out.println("   Result: " + cacheSystem.get("5").join());
-        printSystemState(cache, db);
-
-        System.out.println("=== Testing Write-Through on New Key ===");
-        // The key '10' does not exist in the database initially
-        String newKey = "10";
-        String newValue = "Watermelon";
-        System.out.println("7. Put new key '" + newKey + "' into cache...");
-        cacheSystem.put(newKey, newValue).join();
-
-        System.out.println("   Verifying key '" + newKey + "' exists in cache and DB...");
-        System.out.println("   Cache check: " + ((InMemoryCacheStorage) cache).containsKey(newKey));
-        System.out.println("   DB check: " + (db.read(newKey) != null));
-        System.out.println("   DB value: " + db.read(newKey));
-        printSystemState(cache, db);
+        System.out.println("=== Final Verification ===");
+        System.out.println("Cache contains key '1': " + cache.containsKey("1")); // true
+        System.out.println("Cache contains key '2': " + cache.containsKey("2")); // true
+        System.out.println("Cache contains key '3': " + cache.containsKey("3")); // false
 
         cacheSystem.shutdown();
     }

@@ -1,4 +1,4 @@
-package org.concurrency.questions.cache.interview.distributed;
+package org.concurrency.questions.cache.distributed;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.locks.ReentrantReadWriteLock;

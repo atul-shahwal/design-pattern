@@ -1,6 +1,6 @@
-package org.desingpatterns.basics.creational.factory;
+package org.desingpatterns.basics.creational.factory.common;
 
-public class AndroidDeveloper implements Employee{
+public class AndroidDeveloper implements Employee {
     @Override
     public int getSalary() {
         System.out.println("Getting AndroidDeveloper Salary");
