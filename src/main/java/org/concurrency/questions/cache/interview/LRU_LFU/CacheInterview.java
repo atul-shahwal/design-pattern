@@ -108,16 +108,52 @@ class InMemoryCacheStorage<K, V> implements CacheStorage<K, V> {
     private final Map<K, V> cache = new ConcurrentHashMap<>();
     private final int capacity;
 
-    public InMemoryCacheStorage(int capacity) { this.capacity = capacity; }
+    public InMemoryCacheStorage(int capacity) {
+        this.capacity = capacity;
+    }
 
-    public void put(K key, V value) { cache.put(key, value); }
-    public V get(K key) { return cache.get(key); }
-    public void remove(K key) { cache.remove(key); }
-    public boolean containsKey(K key) { return cache.containsKey(key); }
-    public int size() { return cache.size(); }
-    public int getCapacity() { return capacity; }
-    public Set<K> keySet() { return cache.keySet(); }
+    @Override
+    public void put(K key, V value) {
+        System.out.println("Cache: Putting key " + key + " with value " + value);
+        cache.put(key, value);
+    }
+
+    @Override
+    public V get(K key) {
+        V value = cache.get(key);
+        System.out.println("Cache: Getting key " + key + " -> " + value);
+        return value;
+    }
+
+    @Override
+    public void remove(K key) {
+        System.out.println("Cache: Removing key " + key);
+        cache.remove(key);
+    }
+
+    @Override
+    public boolean containsKey(K key) {
+        boolean exists = cache.containsKey(key);
+        System.out.println("Cache: Contains key " + key + " -> " + exists);
+        return exists;
+    }
+
+    @Override
+    public int size() {
+        return cache.size();
+    }
+
+    @Override
+    public int getCapacity() {
+        return capacity;
+    }
+
+    @Override
+    public Set<K> keySet() {
+        return cache.keySet();
+    }
 }
+
 
 /**
  * ❓ Q: Why do we keep a DB map here instead of a real DB?
@@ -126,10 +162,27 @@ class InMemoryCacheStorage<K, V> implements CacheStorage<K, V> {
  */
 class SimpleDBStorage<K, V> implements DBStorage<K, V> {
     private final Map<K, V> db = new HashMap<>();
-    public void write(K key, V value) { db.put(key, value); }
-    public V read(K key) { return db.get(key); }
-    public void delete(K key) { db.remove(key); }
+
+    @Override
+    public void write(K key, V value) {
+        System.out.println("DB: Writing key " + key + " with value " + value);
+        db.put(key, value);
+    }
+
+    @Override
+    public V read(K key) {
+        V value = db.get(key);
+        System.out.println("DB: Reading key " + key + " -> " + value);
+        return value;
+    }
+
+    @Override
+    public void delete(K key) {
+        System.out.println("DB: Deleting key " + key);
+        db.remove(key);
+    }
 }
+
 
 /**
  * ❓ Q: Why write to both cache and DB together?
@@ -299,9 +352,16 @@ class LFUEvictionAlgorithm<K> implements EvictionAlgorithm<K> {
 
 /**
  * ❓ Q: Why use KeyBasedExecutor instead of a global thread pool?
- * ✅ A: It ensures all operations for the same key are serialized
- * (avoiding race conditions like double-writes).
+ * ✅ A: To ensure that all tasks for the same key are executed in order,
+ * avoiding concurrency issues such as race conditions, inconsistent updates,
+ * or double-writes. A global thread pool would allow tasks for the same key
+ * to run in parallel, leading to unpredictable state changes.
+ *
+ * This design maps keys to specific threads (or queues) so that operations
+ * affecting the same data are serialized while still allowing tasks for
+ * different keys to run concurrently.
  */
+
 class KeyBasedExecutor {
     private final ExecutorService[] executors;
 
@@ -314,6 +374,18 @@ class KeyBasedExecutor {
     public CompletableFuture<Void> submit(Runnable task, Object key) {
         int index = Math.abs(key.hashCode() % executors.length);
         return CompletableFuture.runAsync(task, executors[index]);
+    }
+
+    public <V> CompletableFuture<V> submit(Callable<V> task, Object key) {
+        int index = Math.abs(key.hashCode() % executors.length);
+        ExecutorService executorService = executors[index];
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                return task.call();
+            } catch (Exception e) {
+                throw new CompletionException(e);
+            }
+        }, executorService);
     }
 
     public void shutdown() {
@@ -352,24 +424,20 @@ class Cache<K, V> {
      * In distributed systems, cache/DB reads may be network calls → async improves performance.
      */
     public CompletableFuture<V> get(K key) {
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                V value;
-                if (cache.containsKey(key)) {
-                    value = cache.get(key);
+        return executor.submit(() -> {
+            V value;
+            if (cache.containsKey(key)) {
+                value = cache.get(key);
+                eviction.keyAccessed(key);
+            } else {
+                value = readPolicy.read(key, cache, db);
+                if (value != null) {
                     eviction.keyAccessed(key);
-                } else {
-                    value = readPolicy.read(key, cache, db);
-                    if (value != null) {
-                        eviction.keyAccessed(key);
-                        checkEviction();
-                    }
+                    checkEviction();
                 }
-                return value;
-            } catch (Exception e) {
-                throw new CompletionException(e);
             }
-        });
+            return value;
+        }, key);
     }
 
     /**
@@ -410,124 +478,104 @@ class Cache<K, V> {
  */
 public class CacheInterview {
     public static void main(String[] args) {
-        // Lru test case
-//        CacheStorage<String, String> cache = new InMemoryCacheStorage<>(2);
-//        DBStorage<String, String> db = new SimpleDBStorage<>();
-//        WritePolicy<String, String> writePolicy = new WriteThroughPolicy<>();
-//        ReadPolicy<String, String> readPolicy = new ReadThroughPolicy<>();
-//        EvictionAlgorithm<String> lru = new LRUEvictionAlgorithm<>();
-//
-//        Cache<String, String> cacheSystem = new Cache<>(
-//                cache, db, writePolicy, readPolicy, lru, 4
-//        );
-//
-//        // Initialize DB with some data
-//        db.write("1", "Apple");
-//        db.write("2", "Banana");
-//        db.write("3", "Cherry");
-//
-//        System.out.println("=== Testing Read-Through & Eviction (Capacity: 2) ===");
-//        printSystemState(cache, db);
-//
-//        System.out.println("1. First access to key '1' (Cache Miss -> DB)");
-//        System.out.println("   Result: " + cacheSystem.get("1").join());
-//        printSystemState(cache, db);
-//
-//        System.out.println("2. First access to key '2' (Cache Miss -> DB)");
-//        System.out.println("   Result: " + cacheSystem.get("2").join());
-//        printSystemState(cache, db);
-//
-//        System.out.println("3. Access key '1' again (Cache Hit)");
-//        System.out.println("   Result: " + cacheSystem.get("1").join());
-//        printSystemState(cache, db);
-//
-//        System.out.println("4. Access key '3' (Cache Full -> Evict LRU '2')");
-//        System.out.println("   Result: " + cacheSystem.get("3").join());
-//        printSystemState(cache, db);
-//
-//        System.out.println("5. Access key '2' again (Miss -> DB, Evict '1')");
-//        System.out.println("   Result: " + cacheSystem.get("2").join());
-//        printSystemState(cache, db);
-//
-//        System.out.println("6. Access non-existent key '5' (Read Miss, not in DB)");
-//        System.out.println("   Result: " + cacheSystem.get("5").join());
-//        printSystemState(cache, db);
-//
-//        System.out.println("=== Testing Write-Through on New Key ===");
-//        // The key '10' does not exist in the database initially
-//        String newKey = "10";
-//        String newValue = "Watermelon";
-//        System.out.println("7. Put new key '" + newKey + "' into cache...");
-//        cacheSystem.put(newKey, newValue).join();
-//
-//        System.out.println("   Verifying key '" + newKey + "' exists in cache and DB...");
-//        System.out.println("   Cache check: " + ((InMemoryCacheStorage) cache).containsKey(newKey));
-//        System.out.println("   DB check: " + (db.read(newKey) != null));
-//        System.out.println("   DB value: " + db.read(newKey));
-//        printSystemState(cache, db);
+        // Uncomment this block to test LRU eviction
 
-//        cacheSystem.shutdown();
-
-
-        // LFU Test
         CacheStorage<String, String> cache = new InMemoryCacheStorage<>(2);
         DBStorage<String, String> db = new SimpleDBStorage<>();
         WritePolicy<String, String> writePolicy = new WriteThroughPolicy<>();
         ReadPolicy<String, String> readPolicy = new ReadThroughPolicy<>();
-        EvictionAlgorithm<String> lfu = new LFUEvictionAlgorithm<>();
+        EvictionAlgorithm<String> lru = new LRUEvictionAlgorithm<>();
 
         Cache<String, String> cacheSystem = new Cache<>(
-                cache, db, writePolicy, readPolicy, lfu, 4
+                cache, db, writePolicy, readPolicy, lru, 4
         );
 
-        // Initialize DB with some data
         db.write("1", "Apple");
         db.write("2", "Banana");
         db.write("3", "Cherry");
 
-        System.out.println("=== Testing LFU Eviction (Capacity: 2) ===");
+        System.out.println("=== Testing LRU Eviction (Capacity: 2) ===");
         printSystemState(cache, db);
 
-        System.out.println("1. Access key '1' (Cache Miss -> DB, freq=1)");
-        System.out.println("   Result: " + cacheSystem.get("1").join());
+        System.out.println("Result: " + cacheSystem.get("1").join());
         printSystemState(cache, db);
 
-        System.out.println("2. Access key '2' (Cache Miss -> DB, freq=1)");
-        System.out.println("   Result: " + cacheSystem.get("2").join());
+        System.out.println("Result: " + cacheSystem.get("2").join());
         printSystemState(cache, db);
 
-        System.out.println("3. Access key '1' again (Cache Hit, freq=2)");
-        System.out.println("   Result: " + cacheSystem.get("1").join());
+        System.out.println("Result: " + cacheSystem.get("1").join());
         printSystemState(cache, db);
 
-        System.out.println("4. Access key '3' (Cache Full -> Evict '2' (freq=1))");
-        System.out.println("   Result: " + cacheSystem.get("3").join());
+        System.out.println("Result: " + cacheSystem.get("3").join());
         printSystemState(cache, db);
 
-        System.out.println("5. Access key '1' again (Cache Hit, freq=3)");
-        System.out.println("   Result: " + cacheSystem.get("1").join());
+        System.out.println("Result: " + cacheSystem.get("2").join());
         printSystemState(cache, db);
 
-        System.out.println("6. Access key '3' again (Cache Hit, freq=2)");
-        System.out.println("   Result: " + cacheSystem.get("3").join());
+        System.out.println("Result: " + cacheSystem.get("5").join());
         printSystemState(cache, db);
 
-        System.out.println("7. Access key '2' again (Miss -> DB, Cache Full -> Evict '3' (freq=2))");
-        System.out.println("   Result: " + cacheSystem.get("2").join());
-        printSystemState(cache, db);
+        String newKey = "10";
+        String newValue = "Watermelon";
+        cacheSystem.put(newKey, newValue).join();
 
-        System.out.println("=== Final Verification ===");
-        System.out.println("Cache contains key '1': " + cache.containsKey("1")); // true
-        System.out.println("Cache contains key '2': " + cache.containsKey("2")); // true
-        System.out.println("Cache contains key '3': " + cache.containsKey("3")); // false
+        System.out.println("Cache check: " + ((InMemoryCacheStorage<String, String>) cache).containsKey(newKey));
+        System.out.println("DB check: " + (db.read(newKey) != null));
+        System.out.println("DB value: " + db.read(newKey));
+        printSystemState(cache, db);
 
         cacheSystem.shutdown();
+
+//        // LFU Test case
+//        CacheStorage<String, String> cache = new InMemoryCacheStorage<>(2);
+//        DBStorage<String, String> db = new SimpleDBStorage<>();
+//        WritePolicy<String, String> writePolicy = new WriteThroughPolicy<>();
+//        ReadPolicy<String, String> readPolicy = new ReadThroughPolicy<>();
+//        EvictionAlgorithm<String> lfu = new LFUEvictionAlgorithm<>();
+//
+//        Cache<String, String> cacheSystem = new Cache<>(
+//                cache, db, writePolicy, readPolicy, lfu, 4
+//        );
+//
+//        // Initialize database with some entries
+//        db.write("1", "Apple");
+//        db.write("2", "Banana");
+//        db.write("3", "Cherry");
+//
+//        System.out.println("=== Testing LFU Eviction (Capacity: 2) ===");
+//        printSystemState(cache, db);
+//
+//        System.out.println("Result: " + cacheSystem.get("1").join());
+//        printSystemState(cache, db);
+//
+//        System.out.println("Result: " + cacheSystem.get("2").join());
+//        printSystemState(cache, db);
+//
+//        System.out.println("Result: " + cacheSystem.get("1").join());
+//        printSystemState(cache, db);
+//
+//        System.out.println("Result: " + cacheSystem.get("3").join());
+//        printSystemState(cache, db);
+//
+//        System.out.println("Result: " + cacheSystem.get("1").join());
+//        printSystemState(cache, db);
+//
+//        System.out.println("Result: " + cacheSystem.get("3").join());
+//        printSystemState(cache, db);
+//
+//        System.out.println("Result: " + cacheSystem.get("2").join());
+//        printSystemState(cache, db);
+//
+//        System.out.println("=== Final Verification ===");
+//        System.out.println(cache.containsKey("1"));
+//        System.out.println(cache.containsKey("2"));
+//        System.out.println(cache.containsKey("3"));
+//
+//        cacheSystem.shutdown();
     }
 
     private static void printSystemState(CacheStorage<String, String> cache, DBStorage<String, String> db) {
-        System.out.println("   Cache state: " + ((InMemoryCacheStorage) cache).keySet());
-        // SimpleDBStorage doesn't have a public keySet method, so we will not display its contents.
-        // It is checked in the explicit test case
+        System.out.println("Cache state: " + ((InMemoryCacheStorage<String, String>) cache).keySet());
         System.out.println();
     }
 }
