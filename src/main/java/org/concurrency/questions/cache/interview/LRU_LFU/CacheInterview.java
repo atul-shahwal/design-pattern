@@ -12,7 +12,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * ✅ Requirements:
  * - Configurable capacity with eviction when full (e.g., LRU).
  * - Write-through strategy for cache and database synchronization.
- * - Handle concurrent access efficiently using per-key execution.
  * - Support for scaling and multiple eviction strategies.
  *
  *
@@ -35,12 +34,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * - WritePolicy and read policy interface for different write and read strategies.
  * - EvictionAlgorithm interface for eviction mechanisms like LRU.
  * - KeyBasedExecutor to ensure per-key thread safety.
- *
- * 🚀 Example Flow:
- * 1. Accessing a key updates its access record.
- * 2. Insertion triggers eviction if capacity exceeded.
- * 3. Writes update both cache and database asynchronously.
- */
 /**
  * ❓ Interview Q: Why do we need this interface?
  * ✅ A: It defines the contract for any cache storage implementation (e.g., in-memory, Redis, file-based).
