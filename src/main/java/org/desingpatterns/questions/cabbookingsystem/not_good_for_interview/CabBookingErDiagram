@@ -1,0 +1,422 @@
+@startuml
+' Enums
+enum RideStatus {
+    REQUESTED
+    DRIVER_ASSIGNED
+    IN_PROGRESS
+    COMPLETED
+    CANCELLED
+}
+
+note right of RideStatus
+    **Functionality:**
+    - Defines all possible states of a ride
+    - Ensures proper state transitions
+    - Prevents invalid operations based on current state
+    - Used by RideState pattern implementations
+end note
+
+enum DriverStatus {
+    OFFLINE
+    ONLINE
+    IN_RIDE
+}
+
+note right of DriverStatus
+    **Functionality:**
+    - Manages driver availability for ride assignments
+    - OFFLINE: Not accepting rides
+    - ONLINE: Available for new ride requests
+    - IN_RIDE: Currently serving a ride, unavailable
+end note
+
+' Entities
+class Location {
+    - latitude: double
+    - longitude: double
+    - timestamp: long
+    + getLatitude(): double
+    + getLongitude(): double
+    + getTimestamp(): long
+}
+
+note top of Location
+    **Functionality:**
+    - Represents geographic coordinates with timestamp
+    - Used for tracking users/drivers in real-time
+    - Essential for distance calculations using Haversine formula
+    - Thread-safe immutable implementation
+    - Timestamp helps determine location freshness
+end note
+
+class User {
+    - userId: String
+    - name: String
+    - phone: String
+    - currentLocation: "AtomicReference<Location>"
+    + getUserId(): String
+    + getName(): String
+    + getPhone(): String
+    + getCurrentLocation(): Location
+    + updateLocation(Location): void
+}
+
+note top of User
+    **Functionality:**
+    - Stores user profile information
+    - Manages real-time location updates
+    - Thread-safe location updates using AtomicReference
+    - Serves as ride requester in the system
+    - Can be extended with payment info and ride history
+end note
+
+class Vehicle {
+    - licensePlate: String
+    - model: String
+    - color: String
+    + getLicensePlate(): String
+    + getModel(): String
+    + getColor(): String
+}
+
+note top of Vehicle
+    **Functionality:**
+    - Stores vehicle identification details
+    - Used for driver verification and user recognition
+    - Could be extended with capacity, type, or features
+    - Immutable once registered for safety reasons
+end note
+
+class Driver {
+    - driverId: String
+    - name: String
+    - phone: String
+    - vehicle: Vehicle
+    - currentLocation: "AtomicReference<Location>"
+    - status: "AtomicReference<DriverStatus>"
+    - isAvailable: "AtomicReference<Boolean>"
+    - rating: double
+    - totalRides: int
+    + getDriverId(): String
+    + getName(): String
+    + getPhone(): String
+    + getVehicle(): Vehicle
+    + getRating(): double
+    + getTotalRides(): int
+    + getCurrentLocation(): Location
+    + updateLocation(Location): void
+    + getStatus(): DriverStatus
+    + setStatus(DriverStatus): void
+    + isAvailable(): boolean
+    + setAvailable(boolean): void
+    + updateRating(double): void
+}
+
+note top of Driver
+    **Functionality:**
+    - Manages driver profile and real-time status
+    - Thread-safe location and status updates
+    - Implements CAS-based rating updates for thread safety
+    - Toggles availability based on status changes
+    - Links to Vehicle information
+    - Maintains performance metrics (rating, total rides)
+end note
+
+' Ride State Pattern
+interface RideState {
+    {abstract} requestRide(Ride)
+    {abstract} assignDriver(Ride, Driver)
+    {abstract} startRide(Ride)
+    {abstract} completeRide(Ride)
+    {abstract} cancelRide(Ride)
+    {abstract} getStatus(): RideStatus
+}
+
+note top of RideState
+    **Functionality:**
+    - Defines State Pattern interface for ride management
+    - Encapsulates state-specific behavior and transitions
+    - Prevents invalid operations through state validation
+    - Each method corresponds to a possible ride operation
+    - Returns current status for monitoring purposes
+end note
+
+class RequestedState {
+    + getInstance(): RequestedState
+}
+
+note top of RequestedState
+    **Functionality:**
+    - Initial state after ride creation
+    - Allows driver assignment or cancellation
+    - Prevents starting or completing unassigned rides
+    - Singleton pattern implementation
+    - Validates driver availability before assignment
+end note
+
+class AssignedState {
+    + getInstance(): AssignedState
+}
+
+note top of AssignedState
+    **Functionality:**
+    - State after successful driver assignment
+    - Allows ride start or cancellation
+    - Manages driver availability on cancellation
+    - Prevents duplicate driver assignments
+    - Singleton pattern implementation
+end note
+
+class InProgressState {
+    + getInstance(): InProgressState
+}
+
+note top of InProgressState
+    **Functionality:**
+    - State when ride is actively ongoing
+    - Allows only ride completion
+    - Prevents modifications during active ride
+    - Tracks ride duration for fare calculation
+    - Singleton pattern implementation
+end note
+
+class CompletedState {
+    + getInstance(): CompletedState
+}
+
+note top of CompletedState
+    **Functionality:**
+    - Final state after successful ride completion
+    - Prevents any further modifications
+    - Updates driver metrics (rating, total rides)
+    - Singleton pattern implementation
+end note
+
+class CancelledState {
+    + getInstance(): CancelledState
+}
+
+note top of CancelledState
+    **Functionality:**
+    - Final state after ride cancellation
+    - Prevents any further operations
+    - Handles driver availability restoration if needed
+    - Singleton pattern implementation
+end note
+
+class Ride {
+    - rideId: String
+    - user: User
+    - driver: Driver
+    - pickupLocation: Location
+    - dropoffLocation: Location
+    - createdAt: long
+    - startTime: Long
+    - endTime: Long
+    - fare: double
+    - state: "AtomicReference<RideState>"
+    - lock: "ReentrantLock"
+    + getRideId(): String
+    + getUser(): User
+    + getDriver(): Driver
+    + getPickupLocation(): Location
+    + getDropoffLocation(): Location
+    + getFare(): double
+    + getCreatedAt(): long
+    + getStartTime(): Long
+    + getEndTime(): Long
+    + setDriver(Driver): void
+    + setStartTime(long): void
+    + setEndTime(long): void
+    + setState(RideState): void
+    + getStatus(): RideStatus
+    + assignDriver(Driver): void
+    + startRide(): void
+    + completeRide(): void
+    + cancelRide(): void
+    + calculateFare(): void
+    - calculateDistance(Location, Location): double
+}
+
+note top of Ride
+    **Functionality:**
+    - Manages complete ride lifecycle using State Pattern
+    - Thread-safe operations using ReentrantLock
+    - Calculates fare using distance, time, and base rates
+    - Implements Haversine formula for accurate distance calculation
+    - Tracks timestamps for each ride phase
+    - Maintains relationship with User and Driver
+    - Base fare: ₹40, Per km: ₹12, Per minute: ₹2, Minimum: ₹80
+end note
+
+class BoundingBox {
+    - minLat: double
+    - minLon: double
+    - maxLat: double
+    - maxLon: double
+    + contains(Location): boolean
+    + intersects(BoundingBox): boolean
+    + getMinLat(): double
+    + getMinLon(): double
+    + getMaxLat(): double
+    + getMaxLon(): double
+}
+
+note top of BoundingBox
+    **Functionality:**
+    - Defines geographical boundaries for spatial queries
+    - Checks if location is within bounds
+    - Determines if two bounding boxes intersect
+    - Used by QuadTree for spatial partitioning
+end note
+
+class QuadTreeNode {
+    - boundary: BoundingBox
+    - points: Map<String, Location>
+    - children: "QuadTreeNode[4]"
+    - isDivided: boolean
+    - lock: "ReentrantReadWriteLock"
+    + insert(String, Location): boolean
+    + remove(String, Location): boolean
+    + queryRange(BoundingBox): List<String>
+    - subdivide(): void
+}
+
+note top of QuadTreeNode
+    **Functionality:**
+    - Recursively divides space for efficient spatial queries
+    - Capacity: 4 points before subdivision
+    - Max depth: 10 levels to prevent excessive recursion
+    - Thread-safe operations using ReadWriteLock
+    - Supports dynamic updates (add/remove/query)
+    - Implements range queries for nearby driver search
+end note
+
+class QuadTreeSpatialIndex {
+    - root: QuadTreeNode
+    - driverLocations: Map<String, Location>
+    - lock: "ReentrantReadWriteLock"
+    + addDriver(String, Location): boolean
+    + updateDriverLocation(String, Location): boolean
+    + removeDriver(String): boolean
+    + findWithinRadius(Location, double): List<String>
+}
+
+note top of QuadTreeSpatialIndex
+    **Functionality:**
+    - Spatial index for efficient driver location queries
+    - Manages driver locations in a QuadTree structure
+    - Supports real-time location updates
+    - Finds drivers within specified radius (converted to degrees)
+    - Thread-safe operations using ReadWriteLock
+    - Maintains secondary map for quick driver lookups
+end note
+
+interface MatchingStrategy {
+    {abstract} findBestDriver(Ride, List<Driver>): Driver
+}
+
+note top of MatchingStrategy
+    **Functionality:**
+    - Strategy Pattern interface for driver matching algorithms
+    - Allows interchangeable matching strategies
+    - Encapsulates matching logic in separate implementations
+    - Enables runtime strategy selection
+end note
+
+class DistanceBasedMatching {
+    + findBestDriver(Ride, List<Driver>): Driver
+    - calculateDistance(Location, Location): double
+}
+
+note top of DistanceBasedMatching
+    **Functionality:**
+    - Selects nearest available driver using Haversine formula
+    - Minimizes pickup time and distance
+    - Simple and efficient algorithm
+    - Pros: Reduces fuel consumption, minimizes wait time
+    - Cons: Doesn't consider driver ratings or other factors
+end note
+
+class RatingBasedMatching {
+    + findBestDriver(Ride, List<Driver>): Driver
+    - calculateDistance(Location, Location): double
+}
+
+note top of RatingBasedMatching
+    **Functionality:**
+    - Balances driver rating and proximity
+    - Score = rating * (1 / (1 + distance))
+    - Provides better user experience with higher-rated drivers
+    - Pros: Incentivizes quality service, better user satisfaction
+    - Cons: May increase pickup times, disadvantages new drivers
+end note
+
+class DriverService {
+    - drivers: Map<String, Driver>
+    - spatialIndex: QuadTreeSpatialIndex
+    - lock: "ReentrantReadWriteLock"
+    + registerDriver(Driver): void
+    + updateDriverStatus(String, DriverStatus): void
+    + updateDriverLocation(String, Location): boolean
+    + findNearbyDrivers(Location, double): List<Driver>
+    + getDriver(String): Driver
+}
+
+note top of DriverService
+    **Functionality:**
+    - Manages driver registration and information
+    - Updates spatial index based on driver status changes
+    - Coordinates driver location updates with spatial index
+    - Finds nearby available drivers using spatial index
+    - Thread-safe operations using ReadWriteLock
+    - Only online drivers are added to spatial index
+end note
+
+class RideService {
+    - activeRides: Map<String, Ride>
+    - driverService: DriverService
+    - matchingStrategy: MatchingStrategy
+    - lock: "ReentrantReadWriteLock"
+    + requestRide(User, Location, Location): Ride
+    + startRide(String): void
+    + completeRide(String): void
+    + cancelRide(String): void
+    + getRide(String): Ride
+}
+
+note top of RideService
+    **Functionality:**
+    - Orchestrates complete ride lifecycle
+    - Creates rides and assigns drivers using matching strategy
+    - Manages active rides collection
+    - Handles ride state transitions
+    - Uses 200km search radius for driver matching
+    - Thread-safe operations using ReadWriteLock
+    - Automatically cancels rides if no drivers available
+end note
+
+' Relationships
+User ||--o{ Ride : requests
+Driver ||--o{ Ride : serves
+Driver ||--|| Vehicle : operates
+Ride ||--|| Location : has_pickup
+Ride ||--|| Location : has_dropoff
+Ride ||--o| RideState : has_state
+
+DriverService ||--|| QuadTreeSpatialIndex : uses_index
+RideService ||--|| DriverService : uses
+RideService ||--|| MatchingStrategy : uses_strategy
+
+QuadTreeSpatialIndex ||--|| QuadTreeNode : contains
+QuadTreeNode ||--|| BoundingBox : has_boundary
+
+MatchingStrategy <|-- DistanceBasedMatching
+MatchingStrategy <|-- RatingBasedMatching
+
+RideState <|-- RequestedState
+RideState <|-- AssignedState
+RideState <|-- InProgressState
+RideState <|-- CompletedState
+RideState <|-- CancelledState
+@enduml

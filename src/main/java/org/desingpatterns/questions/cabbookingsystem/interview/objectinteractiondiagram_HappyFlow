@@ -1,0 +1,101 @@
+@startuml
+actor User as user
+participant "OnlineCabBookingSystemInterview" as main
+participant "RideService" as rideService
+participant "DriverService" as driverService
+participant "Ride" as ride
+participant "DistanceBasedMatching" as matching
+participant "Driver" as driver
+participant "User" as userObj
+
+user -> main: run()
+activate main
+
+main -> driverService: registerDriver(driver1)
+main -> driverService: registerDriver(driver2)
+
+main -> driverService: updateDriverStatus("D1", ONLINE)
+main -> driverService: updateDriverStatus("D2", ONLINE)
+
+main -> driverService: updateDriverLocation("D1", location1)
+main -> driverService: updateDriverLocation("D2", location2)
+
+main -> userObj: updateLocation(userLocation)
+
+main -> rideService: requestRide(user, pickup, dropoff)
+activate rideService
+
+rideService -> rideService: create Ride object
+rideService -> driverService: findNearbyDrivers(pickup, 200.0)
+activate driverService
+driverService --> rideService: [driver1, driver2]
+deactivate driverService
+
+rideService -> matching: findBestDriver(ride, drivers)
+activate matching
+matching -> matching: calculateDistance() for each driver
+matching --> rideService: driver1 (closest)
+deactivate matching
+
+rideService -> ride: assignDriver(driver1)
+activate ride
+
+ride -> ride: lock.lock()
+ride -> driver1: setAvailable(false)
+ride -> driver1: setStatus(IN_RIDE)
+ride -> ride: state.set(AssignedState)
+ride -> ride: lock.unlock()
+
+ride --> rideService:
+deactivate ride
+
+rideService --> main: ride object
+deactivate rideService
+
+main -> rideService: startRide(rideId)
+activate rideService
+rideService -> ride: startRide()
+activate ride
+
+ride -> ride: lock.lock()
+ride -> ride: startTime = System.currentTimeMillis()
+ride -> ride: state.set(InProgressState)
+ride -> ride: lock.unlock()
+
+ride --> rideService:
+deactivate ride
+rideService --> main:
+deactivate rideService
+
+main -> main: Thread.sleep(1000) \n// Simulate ride duration
+
+main -> rideService: completeRide(rideId)
+activate rideService
+rideService -> ride: completeRide()
+activate ride
+
+ride -> ride: lock.lock()
+ride -> ride: endTime = System.currentTimeMillis()
+ride -> ride: calculateFare()
+activate ride
+
+ride -> ride: calculateDistance()\n// Using Haversine formula
+ride -> ride: fare = max(MIN_FARE,\n BASE + distance*RATE + time*RATE)
+
+ride --> ride:
+deactivate ride
+ride -> driver1: setAvailable(true)
+ride -> driver1: setStatus(ONLINE)
+ride -> ride: state.set(CompletedState)
+ride -> ride: lock.unlock()
+
+ride --> rideService:
+deactivate ride
+rideService -> rideService: activeRides.remove(rideId)
+rideService --> main:
+deactivate rideService
+
+main -> main: Print ride status and fare
+
+deactivate main
+@enduml

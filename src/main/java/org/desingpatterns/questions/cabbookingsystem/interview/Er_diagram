@@ -1,0 +1,260 @@
+@startuml
+!theme plain
+
+' Enums
+enum RideStatus {
+    REQUESTED
+    DRIVER_ASSIGNED
+    IN_PROGRESS
+    COMPLETED
+    CANCELLED
+    --
+    Manages ride lifecycle states
+}
+
+enum DriverStatus {
+    OFFLINE
+    ONLINE
+    IN_RIDE
+    --
+    Tracks driver availability
+}
+
+' Main Classes
+class Location {
+    - double latitude
+    - double longitude
+    - long timestamp
+    --
+    + Location(lat, long)
+    --
+    Represents geographic coordinates
+    Used for distance calculations
+}
+
+class User {
+    - String userId
+    - String name
+    - String phone
+    - AtomicReference<Location> currentLocation
+    --
+    + updateLocation(Location)
+    --
+    Thread-safe location updates
+    User entity management
+}
+
+class Vehicle {
+    - String licensePlate
+    - String model
+    - String color
+    --
+    Vehicle identification
+    Capacity planning
+}
+
+class Driver {
+    - String driverId
+    - AtomicReference<Location> currentLocation
+    - AtomicReference<DriverStatus> status
+    - AtomicReference<Boolean> isAvailable
+    - double rating
+    --
+    + updateLocation(Location)
+    + setStatus(DriverStatus)
+    + updateRating(double)
+    --
+    Thread-safe status management
+    Performance tracking
+}
+
+interface RideState {
+    + requestRide(Ride)
+    + assignDriver(Ride, Driver)
+    + startRide(Ride)
+    + completeRide(Ride)
+    + cancelRide(Ride)
+    + getStatus()
+    --
+    State Pattern Interface
+    Encapsulates state behavior
+}
+
+class RequestedState {
+    - static instance
+    --
+    + getInstance()
+    --
+    Initial ride state
+    Allows: assignDriver, cancelRide
+}
+
+class AssignedState {
+    - static instance
+    --
+    + getInstance()
+    --
+    Driver assigned state
+    Allows: startRide, cancelRide
+}
+
+class InProgressState {
+    - static instance
+    --
+    + getInstance()
+    --
+    Ride in progress
+    Allows: completeRide only
+}
+
+class CompletedState {
+    - static instance
+    --
+    + getInstance()
+    --
+    Terminal state
+    No transitions allowed
+}
+
+class CancelledState {
+    - static instance
+    --
+    + getInstance()
+    --
+    Terminal state
+    No transitions allowed
+}
+
+class Ride {
+    - String rideId
+    - User user
+    - Location pickupLocation
+    - Location dropoffLocation
+    - Driver driver
+    - double fare
+    - AtomicReference<RideState> state
+    - ReentrantLock lock
+    --
+    + assignDriver(Driver)
+    + startRide()
+    + completeRide()
+    + cancelRide()
+    + calculateFare()
+    --
+    Uses State Pattern
+    Thread-safe operations
+    Fare calculation logic
+}
+
+interface MatchingStrategy {
+    + findBestDriver(Ride, List<Driver>)
+    --
+    Strategy Pattern Interface
+    Driver matching algorithms
+}
+
+class DistanceBasedMatching {
+    + findBestDriver(Ride, List<Driver>)
+    - calculateDistance(Location, Location)
+    --
+    Concrete strategy
+    Uses Haversine formula
+}
+
+class DriverService {
+    - Map<String, Driver> drivers
+    - List<Driver> availableDrivers
+    --
+    + registerDriver(Driver)
+    + updateDriverStatus(String, DriverStatus)
+    + findNearbyDrivers(Location, double)
+    --
+    Manages driver registry
+    Spatial queries
+}
+
+class RideService {
+    - Map<String, Ride> activeRides
+    - DriverService driverService
+    - MatchingStrategy matchingStrategy
+    --
+    + requestRide(User, Location, Location)
+    + startRide(String)
+    + completeRide(String)
+    --
+    Coordinates ride lifecycle
+    Uses Strategy Pattern for matching
+}
+
+class OnlineCabBookingSystemInterview {
+    + main(String[])
+    --
+    Demo class
+    System initialization
+}
+
+' Relationships
+User o-- Location
+Driver o-- Vehicle
+Driver o-- Location
+Driver o-- DriverStatus
+
+Ride o-- User
+Ride o-- Driver
+Ride o-- Location
+Ride o-- RideState
+
+RideState <|.. RequestedState
+RideState <|.. AssignedState
+RideState <|.. InProgressState
+RideState <|.. CompletedState
+RideState <|.. CancelledState
+
+MatchingStrategy <|.. DistanceBasedMatching
+
+RideService o-- DriverService
+RideService o-- MatchingStrategy
+DriverService o-- Driver
+
+' Notes
+note top of RideState
+**State Pattern**
+- Encapsulates ride state behavior
+- Allows clean state transitions
+- Prevents invalid operations
+end note
+
+note top of MatchingStrategy
+**Strategy Pattern**
+- Interchangeable matching algorithms
+- Easy to add new strategies
+- Decouples matching logic
+end note
+
+note top of Ride
+**Thread Safety**
+- Uses ReentrantLock for critical sections
+- AtomicReference for state changes
+- Thread-safe fare calculation
+end note
+
+note top of Driver
+**Concurrent Access**
+- AtomicReference for location/status
+- Thread-safe rating updates
+- Compare-and-swap pattern
+end note
+
+note top of User
+**Location Updates**
+- AtomicReference for thread safety
+- Concurrent location updates
+end note
+
+note top of DistanceBasedMatching
+**Haversine Formula**
+- Great-circle distance calculation
+- Accounts for Earth's curvature
+- More accurate than Euclidean
+end note
+@enduml

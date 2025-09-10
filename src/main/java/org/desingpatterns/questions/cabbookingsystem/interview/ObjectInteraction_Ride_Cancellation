@@ -1,0 +1,34 @@
+@startuml
+actor User as user
+participant "RideService" as rideService
+participant "Ride" as ride
+participant "Driver" as driver
+
+user -> rideService: cancelRide(rideId)
+activate rideService
+
+rideService -> ride: cancelRide()
+activate ride
+
+ride -> ride: lock.lock()
+ride -> ride: state.cancelRide()
+activate ride
+
+alt Ride in REQUESTED state
+    ride -> ride: state.set(CancelledState)
+else Ride in ASSIGNED state
+    ride -> driver: setAvailable(true)
+    ride -> driver: setStatus(ONLINE)
+    ride -> ride: state.set(CancelledState)
+end
+
+ride --> ride:
+deactivate ride
+ride -> ride: lock.unlock()
+
+ride --> rideService:
+deactivate ride
+rideService -> rideService: activeRides.remove(rideId)
+rideService --> user:
+deactivate rideService
+@enduml

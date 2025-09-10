@@ -1,0 +1,74 @@
+@startuml
+actor User as user
+participant "RideService" as rideService
+participant "DriverService" as driverService
+participant "QuadTreeSpatialIndex" as spatialIndex
+participant "MatchingStrategy" as matchingStrategy
+participant "Driver" as driver
+participant "Ride" as ride
+
+user -> rideService: requestRide(pickup, dropoff)
+activate rideService
+
+rideService -> rideService: createRide()
+rideService -> driverService: findNearbyDrivers(pickup, radius)
+activate driverService
+
+driverService -> spatialIndex: findWithinRadius(center, radiusKm)
+activate spatialIndex
+spatialIndex --> driverService: List<driverIds>
+deactivate spatialIndex
+
+driverService -> driverService: filterAvailableDrivers()
+driverService --> rideService: List<Driver>
+deactivate driverService
+
+rideService -> matchingStrategy: findBestDriver(ride, drivers)
+activate matchingStrategy
+matchingStrategy --> rideService: bestDriver
+deactivate matchingStrategy
+
+alt driver found
+    rideService -> ride: assignDriver(driver)
+    activate ride
+    ride -> driver: setAvailable(false)
+    ride -> driver: setStatus(IN_RIDE)
+    ride --> rideService: success
+    deactivate ride
+
+    rideService -> user: Ride with DRIVER_ASSIGNED
+else no driver found
+    rideService -> ride: cancelRide()
+    rideService -> user: Ride with CANCELLED
+end
+
+deactivate rideService
+
+...
+
+user -> rideService: startRide(rideId)
+activate rideService
+rideService -> ride: startRide()
+activate ride
+ride --> rideService: success
+deactivate ride
+rideService -> user: confirmation
+deactivate rideService
+
+...
+
+user -> rideService: completeRide(rideId)
+activate rideService
+rideService -> ride: completeRide()
+activate ride
+
+ride -> ride: calculateFare()
+ride -> driver: setAvailable(true)
+ride -> driver: setStatus(ONLINE)
+ride -> driver: updateRating(newRating)
+
+ride --> rideService: success
+deactivate ride
+rideService -> user: ride completion + fare
+deactivate rideService
+@enduml

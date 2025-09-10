@@ -1,0 +1,25 @@
+@startuml
+actor User as user
+participant "RideService" as rideService
+participant "Ride" as ride
+participant "DriverService" as driverService
+
+user -> rideService: requestRide(user, pickup, dropoff)
+activate rideService
+
+rideService -> rideService: create Ride object
+rideService -> driverService: findNearbyDrivers(pickup, 200.0)
+activate driverService
+driverService --> rideService: [] // Empty list
+deactivate driverService
+
+rideService -> ride: cancelRide()
+activate ride
+
+ride -> ride: state.set(CancelledState)
+ride --> rideService:
+deactivate ride
+
+rideService --> user: ride (CANCELLED)
+deactivate rideService
+@enduml
