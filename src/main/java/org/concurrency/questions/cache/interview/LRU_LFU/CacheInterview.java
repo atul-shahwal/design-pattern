@@ -15,9 +15,24 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * - Handle concurrent access efficiently using per-key execution.
  * - Support for scaling and multiple eviction strategies.
  *
+ *
+ * 📌 Notes:
+ * 1. Currently, this design focuses on a single-node in-memory cache.
+ * 2. ReadThroughCachePolicy:
+ *    → Read from cache; if missed, read from database, update cache, and return the result.
+ * 3. WriteThroughCachePolicy:
+ *    → Write to both cache and database simultaneously.
+ * 4. LRU Eviction Algorithm is implemented as the eviction policy.
+ *
+ * 📦 Future Action Items:
+ * - Make the cache distributed using consistent hashing and support cache replication.
+ * - Implement different eviction strategies (e.g., LFU, TTL-based eviction).
+ * - Implement Cache Aside read strategy.
+ * - Support additional write policies like Write Back and Write Around.
+ *
  * 📦 Key Components:
  * - CacheStorage & DBStorage interfaces for cache and database operations.
- * - WritePolicy interface for different write strategies.
+ * - WritePolicy and read policy interface for different write and read strategies.
  * - EvictionAlgorithm interface for eviction mechanisms like LRU.
  * - KeyBasedExecutor to ensure per-key thread safety.
  *
