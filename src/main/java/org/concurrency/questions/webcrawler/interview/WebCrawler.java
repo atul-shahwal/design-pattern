@@ -1,4 +1,4 @@
-package org.concurrency.questions.webcrawler;
+package org.concurrency.questions.webcrawler.interview;
 
 import java.util.*;
 import java.util.concurrent.*;
