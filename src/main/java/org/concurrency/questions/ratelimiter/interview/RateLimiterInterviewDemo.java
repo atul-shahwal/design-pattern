@@ -17,9 +17,9 @@ import java.util.concurrent.locks.ReentrantLock;
  * - Ensure thread safety with proper synchronization.
  *
  * 📦 Key Components:
- * - RateLimiter interface for abstraction.
- * - TokenBucketLimiter for token management.
- * - RateLimiterController for handling requests and concurrency.
+ * - RateLimitingStrategy interface for abstraction.
+ * - TokenBucketRateLimitingStrategy for token management.
+ * - RateLimiterContext for handling requests and concurrency.
  *
  * 📌 Notes:
  * 1. This design focuses on a single-node in-memory implementation.
@@ -63,7 +63,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * 8. ✅ **Configuration Management**:
  *    → Allow limits and refill rates to be dynamically updated via config files or APIs without redeployment.
  */
-interface RateLimiter {
+interface RateLimitingStrategy {
     boolean allowRequest(String key);
 
     void updateConfig(int capacity, int refillRate);
@@ -75,7 +75,7 @@ interface RateLimiter {
  * ✅ Why use an interface?
  * It abstracts implementation details and allows us to extend to other algorithms later.
  */
-class TokenBucketLimiter implements RateLimiter {
+class TokenBucketRateLimitingStrategy  implements RateLimitingStrategy {
 
     private final int capacity;
     private volatile int refillRate;
@@ -84,7 +84,7 @@ class TokenBucketLimiter implements RateLimiter {
     private final ScheduledExecutorService scheduler;
     private final long refillIntervalMillis;
 
-    public TokenBucketLimiter(int capacity, int refillRate) {
+    public TokenBucketRateLimitingStrategy (int capacity, int refillRate) {
         this.capacity = capacity;
         this.refillRate = refillRate;
         this.refillIntervalMillis = 1000; // refill every second
@@ -178,10 +178,10 @@ class TokenBucketLimiter implements RateLimiter {
  */
 class RateLimiterController {
 
-    private final RateLimiter limiter;
+    private final RateLimitingStrategy limiter;
     private final ExecutorService executor;
 
-    public RateLimiterController(RateLimiter limiter, ExecutorService executor) {
+    public RateLimiterController(RateLimitingStrategy limiter, ExecutorService executor) {
         this.limiter = limiter;
         this.executor = executor;
     }
@@ -221,7 +221,7 @@ public class RateLimiterInterviewDemo {
         ExecutorService executor = Executors.newFixedThreadPool(4);
 
         // Create the limiter without a factory pattern
-        TokenBucketLimiter tokenBucket = new TokenBucketLimiter(capacity, refillRate);
+        TokenBucketRateLimitingStrategy  tokenBucket = new TokenBucketRateLimitingStrategy (capacity, refillRate);
         RateLimiterController controller = new RateLimiterController(tokenBucket, executor);
 
         testGlobalLimiting(controller);
