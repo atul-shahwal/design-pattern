@@ -29,7 +29,39 @@ import java.util.concurrent.locks.ReentrantLock;
  *    → Uses ScheduledExecutorService for periodic refills.
  * 3. ReentrantLock ensures thread safety during token consumption and refill.
  * 4. CompletableFuture in the controller allows async request handling.
- * 5. The design avoids Factory Pattern for simplicity in interviews but can be extended later.
+ *
+ * 📈 Future Scope:
+ * 1. ✅ **Factory Pattern Implementation**:
+ *    → Introduce a Factory Pattern to dynamically create different rate limiter algorithms
+ *      (e.g., Leaky Bucket, Fixed Window, Sliding Window).
+ *    → Improves extensibility and modularity for algorithm switching.
+ *
+ * 2. ✅ **Distributed Rate Limiting**:
+ *    → Extend from a single-node to a distributed environment using centralized stores like Redis or etcd.
+ *    → Ensure consistency and atomic operations across nodes.
+ *
+ * 3. ✅ **Persistence & Recovery**:
+ *    → Store token states periodically to prevent data loss during restarts.
+ *    → Use databases or distributed caches to back up state.
+ *
+ * 4. ✅ **Monitoring & Analytics**:
+ *    → Integrate with monitoring tools to track requests, token refill rates, and limits reached.
+ *    → Provide dashboards for real-time visibility.
+ *
+ * 5. ✅ **Rate Limiter Policies**:
+ *    → Support dynamic adjustment of limits based on load, time of day, or user tiers.
+ *    → Implement fallback strategies when limits are exceeded.
+ *
+ * 6. ✅ **Security & Abuse Detection**:
+ *    → Detect anomalous usage patterns and throttle suspicious activities.
+ *    → Integrate with authentication systems for better access control.
+ *
+ * 7. ✅ **Testing & Validation Framework**:
+ *    → Add unit tests, integration tests, and chaos testing to ensure correctness under concurrency.
+ *    → Simulate failure scenarios in distributed setups.
+ *
+ * 8. ✅ **Configuration Management**:
+ *    → Allow limits and refill rates to be dynamically updated via config files or APIs without redeployment.
  */
 interface RateLimiter {
     boolean allowRequest(String key);
