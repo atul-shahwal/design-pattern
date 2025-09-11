@@ -700,25 +700,44 @@ class DriverService {
 
     /**
      * Interview Q&A: How does the Haversine formula work for distance calculation?
-     * Answer: The Haversine formula calculates the great-circle distance between two points
-     * on a sphere given their longitudes and latitudes. It's more accurate than simple
-     * Euclidean distance for geographical coordinates because it accounts for Earth's curvature.
+     * Answer:
+     * The Haversine formula calculates the great-circle distance between two points
+     * on a sphere given their latitudes and longitudes. It is more accurate than using
+     * simple Euclidean distance because it accounts for the Earth's curvature.
+     *
+     * Mathematical formula:
+     *
+     * a = sin²(Δφ / 2) + cos(φ1) * cos(φ2) * sin²(Δλ / 2)
+     * c = 2 * atan2(√a, √(1 − a))
+     * d = R * c
+     *
+     * where:
+     * - φ1, φ2 are the latitudes of the two points in radians
+     * - λ1, λ2 are the longitudes of the two points in radians
+     * - Δφ = φ2 - φ1 is the difference in latitude
+     * - Δλ = λ2 - λ1 is the difference in longitude
+     * - R is the Earth's radius (mean radius = 6371 km)
+     * - d is the calculated distance between the two points along the surface of the sphere
      */
     private double calculateDistance(Location loc1, Location loc2) {
-        final int R = 6371; // Earth's radius in km
+        final int R = 6371; // Earth's radius in kilometers
 
-        double lat1 = Math.toRadians(loc1.latitude);
-        double lat2 = Math.toRadians(loc2.latitude);
-        double deltaLat = Math.toRadians(loc2.latitude - loc1.latitude);
-        double deltaLon = Math.toRadians(loc2.longitude - loc1.longitude);
+        // Convert latitude and longitude from degrees to radians
+        double lat1 = Math.toRadians(loc1.latitude); // φ1
+        double lat2 = Math.toRadians(loc2.latitude); // φ2
+        double deltaLat = Math.toRadians(loc2.latitude - loc1.latitude); // Δφ
+        double deltaLon = Math.toRadians(loc2.longitude - loc1.longitude); // Δλ
 
-        double a = Math.sin(deltaLat/2) * Math.sin(deltaLat/2) +
-                Math.cos(lat1) * Math.cos(lat2) *
-                        Math.sin(deltaLon/2) * Math.sin(deltaLon/2);
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        // Apply the Haversine formula
+        double a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) + // sin²(Δφ / 2)
+                Math.cos(lat1) * Math.cos(lat2) *                 // cos(φ1) * cos(φ2)
+                        Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);   // sin²(Δλ / 2)
 
-        return R * c;
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));    // 2 * atan2(√a, √(1 − a))
+
+        return R * c; // d = R * c
     }
+
 
     Driver getDriver(String driverId) {
         return drivers.get(driverId);
