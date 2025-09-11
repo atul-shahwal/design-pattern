@@ -846,12 +846,12 @@ class RideService {
 // Main class to demonstrate the system
 public class OnlineCabBookingSystemInterview {
     public static void main(String[] args) {
-        // Initialize services
+        // ✅ Initialize services for driver, matching, and rides
         DriverService driverService = new DriverService();
         MatchingStrategy matchingStrategy = new DistanceBasedMatching();
         RideService rideService = new RideService(driverService, matchingStrategy);
 
-        // Create some drivers
+        // ✅ Create some drivers with vehicles
         Vehicle vehicle1 = new Vehicle("ABC123", "Toyota Camry", "White");
         Vehicle vehicle2 = new Vehicle("XYZ789", "Honda Accord", "Black");
 
@@ -861,18 +861,24 @@ public class OnlineCabBookingSystemInterview {
         driverService.registerDriver(driver1);
         driverService.registerDriver(driver2);
 
-        // Set drivers to online and update their locations
+        // ✅ Set drivers online so they can accept ride requests
         driverService.updateDriverStatus("D1", DriverStatus.ONLINE);
         driverService.updateDriverStatus("D2", DriverStatus.ONLINE);
 
+        // ✅ Update drivers' locations using latitude and longitude
+        // Latitudes range from -90 (South Pole) to +90 (North Pole)
+        // Longitudes range from -180 (west of Prime Meridian) to +180 (east of Prime Meridian)
+        // Example:
+        // Location(10, 10) means 10° North latitude, 10° East longitude
         driverService.updateDriverLocation("D1", new Location(10, 10));
         driverService.updateDriverLocation("D2", new Location(12, 12));
 
-        // Create a user
+        // ✅ Create a user and set their current location
         User user = new User("U1", "Alice Johnson", "555-0001");
-        user.updateLocation(new Location(11, 11));
+        user.updateLocation(new Location(11, 11)); // 11° North, 11° East
 
-        // Request a ride
+        // ✅ Request a ride from user's current location to a destination
+        // Destination at (20, 20) means 20° North, 20° East
         Ride ride = rideService.requestRide(user, new Location(11, 11), new Location(20, 20));
 
         System.out.println("Ride status: " + ride.getStatus());
@@ -880,23 +886,26 @@ public class OnlineCabBookingSystemInterview {
         if (ride.getStatus() == RideStatus.DRIVER_ASSIGNED) {
             System.out.println("Assigned driver: " + ride.driver.name);
 
-            // Simulate ride progress by adding a delay
+            // ✅ Simulate ride progress by adding a delay
             try {
                 Thread.sleep(1000); // Simulate 1 minute ride duration
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
 
-            // Start the ride only if a driver was assigned
+            // ✅ Start the ride after driver assignment
             rideService.startRide(ride.rideId);
             System.out.println("Ride status after starting: " + ride.getStatus());
 
-            // Complete the ride
+            // ✅ Complete the ride
             rideService.completeRide(ride.rideId);
             System.out.println("Ride status after completion: " + ride.getStatus());
+
+            // ✅ Display the calculated fare based on distance and other factors
             System.out.println("Ride fare: ₹" + String.format("%.2f", ride.fare));
         } else {
             System.out.println("Ride could not be assigned to a driver. It was likely cancelled automatically.");
         }
     }
+
 }
