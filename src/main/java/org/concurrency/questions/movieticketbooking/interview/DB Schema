@@ -1,0 +1,103 @@
+/**
+ * ✅ Final Architecture and Database Choices with Schema Design
+ *
+ * 1. UserService & UserRepository
+ * - Manages user accounts, authentication, and profile information
+ * - DB: CockroachDB for structured, distributed, and strongly consistent data
+ * - Cache: Redis for session management and fast lookups
+ * Schema:
+ *   CREATE TABLE users (
+ *     user_id BIGINT PRIMARY KEY,
+ *     name STRING NOT NULL,
+ *     email STRING UNIQUE NOT NULL,
+ *     password_hash STRING NOT NULL,
+ *     created_at TIMESTAMP DEFAULT now()
+ *   );
+ *
+ * 2. TheatreService & TheatreRepository
+ * - Handles theatres, screens, and seating layouts
+ * - DB: CockroachDB for distributed relational data with high availability
+ * - Search: Elasticsearch for querying theatres and screens efficiently(based on geo coding)
+ * Schema:
+ *   CREATE TABLE theatres (
+ *     theatre_id BIGINT PRIMARY KEY,
+ *     name STRING NOT NULL,
+ *     location STRING NOT NULL
+ *   );
+ *   CREATE TABLE screens (
+ *     screen_id BIGINT PRIMARY KEY,
+ *     theatre_id BIGINT REFERENCES theatres(theatre_id),
+ *     name STRING NOT NULL
+ *   );
+ *   CREATE TABLE seats (
+ *     seat_id BIGINT PRIMARY KEY,
+ *     screen_id BIGINT REFERENCES screens(screen_id),
+ *     row INT NOT NULL,
+ *     category STRING NOT NULL
+ *   );
+ *
+ * 3. ShowService & ShowRepository
+ * - Manages movies and their scheduling across theatres and screens
+ * - DB: CockroachDB to support transactional consistency across distributed deployments
+ * Schema:
+ *   CREATE TABLE movies (
+ *     movie_id BIGINT PRIMARY KEY,
+ *     name STRING NOT NULL,
+ *     type STRING NOT NULL,
+ *     status STRING NOT NULL
+ *   );
+ *   CREATE TABLE shows (
+ *     show_id BIGINT PRIMARY KEY,
+ *     movie_id BIGINT REFERENCES movies(movie_id),
+ *     start_time TIMESTAMP NOT NULL
+ *   );
+ *   CREATE TABLE show_theatres (
+ *     show_id BIGINT REFERENCES shows(show_id),
+ *     theatre_id BIGINT REFERENCES theatres(theatre_id),
+ *     PRIMARY KEY (show_id, theatre_id)
+ *   );
+ *
+ * 4. BookingService & BookingRepository
+ * - Handles seat reservation and state changes with ACID compliance
+ * - DB: CockroachDB for distributed transactions ensuring no double-booking under high concurrency
+ * Schema:
+ *   CREATE TABLE bookings (
+ *     booking_id BIGINT PRIMARY KEY,
+ *     user_id BIGINT REFERENCES users(user_id),
+ *     show_id BIGINT REFERENCES shows(show_id),
+ *     theatre_id BIGINT REFERENCES theatres(theatre_id),
+ *     screen_id BIGINT REFERENCES screens(screen_id),
+ *     status STRING NOT NULL,
+ *     created_at TIMESTAMP DEFAULT now()
+ *   );
+ *   CREATE TABLE booked_seats (
+ *     booking_id BIGINT REFERENCES bookings(booking_id),
+ *     seat_id BIGINT REFERENCES seats(seat_id),
+ *     PRIMARY KEY (booking_id, seat_id)
+ *   );
+ *
+ * 5. PaymentService
+ * - Processes payments with audit and compliance considerations
+ * - DB: CockroachDB if consistency is required or another store if performance-focused
+ * Schema (optional depending on audit needs):
+ *   CREATE TABLE payments (
+ *     payment_id BIGINT PRIMARY KEY,
+ *     booking_id BIGINT REFERENCES bookings(booking_id),
+ *     amount DECIMAL NOT NULL,
+ *     status STRING NOT NULL,
+ *     payment_method STRING NOT NULL,
+ *     processed_at TIMESTAMP DEFAULT now()
+ *   );
+ *
+ * 6. Microservice Decomposition
+ * - Split into: UserService, TheatreService, ShowService, BookingService, PaymentService
+ * - Benefits:
+ *   • Independent scaling per service
+ *   • Fault isolation to prevent cascading failures
+ *   • Faster deployments and easier maintenance
+ * - Architecture tools:
+ *   • API Gateway for unified access
+ *   • Event-driven messaging (e.g., Kafka) for decoupled communication
+ *   • Observability tools like Prometheus and Grafana for monitoring
+ *   • Service mesh (e.g., Istio) for traffic management and security
+ */
