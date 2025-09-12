@@ -44,6 +44,10 @@ import java.util.concurrent.locks.ReentrantLock;
  *   • ShowService → CockroachDB + (Redis)
  *   • BookingService → CockroachDB (preferred for consistency and fault tolerance)
  *   • PaymentService → CockroachDB or other store depending on audit requirements
+ *    * 🟠 Trade-offs:
+ *  *  • CockroachDB → Slightly higher latency due to distributed consensus, but ensures correctness.
+ *  *  • NoSQL → Faster reads/writes, but harder to guarantee seat availability under concurrent booking requests.
+ *
  */
 
 
