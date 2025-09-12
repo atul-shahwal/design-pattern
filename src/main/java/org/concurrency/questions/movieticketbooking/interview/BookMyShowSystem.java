@@ -4,7 +4,7 @@ import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * 1. ENUMS: Define fixed states and types (SeatStatus, BookingStatus, etc.)
+ * 1. ENUMS: Define fixed states and types (SeatStatus, BookingStatus, SeatCategory, LANGUAGE, MovieStatus.)
  * 2. ENTITIES: Core domain objects (User, Seat, Theatre, Screen, Movie, Show, Booking)
  * 3. REPOSITORIES: Data access layer (ShowRepository, BookingRepository)
  * 4. PAYMENT SERVICE: Payment processing with Strategy pattern
@@ -64,19 +64,11 @@ enum MovieStatus {AVAILABLE, NOT_AVAILABLE}
 
 // ==================== ENTITIES ====================
 
-/**
- * ❓ Why use Strategy Pattern for payments?
- * ✅ Allows easy addition of new payment methods without changing existing code
- * ✅ Follows Open/Closed Principle
- */
-interface PaymentStrategy {
-    boolean pay(Booking booking, double amount);
-}
+
 
 /**
- * ❓ Why make User class static and final fields?
- * ✅ Static nested class doesn't need reference to outer class, reducing memory overhead
- * ✅ Final fields ensure immutability and thread safety
+ * ❓ Why make User class final fields?
+ * ✅ Final fields ensure values don't change at time of booking
  */
 class User {
     private final Long userId;
@@ -258,18 +250,12 @@ class Booking {
     private final Long bookingId;
     private final User user;
     private final Show show;
-    private final Theatre theatre;
-    private final Screen screen;
-    private final List<Seat> seats;
     private BookingStatus status;
 
     public Booking(Long bookingId, User user, Show show, Theatre theatre, Screen screen, List<Seat> seats) {
         this.bookingId = bookingId;
         this.user = user;
         this.show = show;
-        this.theatre = theatre;
-        this.screen = screen;
-        this.seats = seats;
         this.status = BookingStatus.CREATED;
     }
 
@@ -319,6 +305,15 @@ class BookingRepository {
     public Booking getBooking(Long bookingId) {
         return bookings.get(bookingId);
     }
+}
+
+/**
+ * ❓ Why use Strategy Pattern for payments?
+ * ✅ Allows easy addition of new payment methods without changing existing code
+ * ✅ Follows Open/Closed Principle
+ */
+interface PaymentStrategy {
+    boolean pay(Booking booking, double amount);
 }
 
 class CreditCardPayment implements PaymentStrategy {

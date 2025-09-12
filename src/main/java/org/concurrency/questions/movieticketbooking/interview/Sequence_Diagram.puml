@@ -1,0 +1,41 @@
+@startuml
+!theme plain
+title BookMyShowSystem - Test Case 1 Sequence Diagram
+
+actor BookMyShowSystem
+participant BookingService
+participant ShowService
+participant ShowRepository
+participant BookingRepository
+participant PaymentService
+participant CreditCardPayment
+participant SeatStatusMap as "SeatStatus Map"
+
+== Booking Request for User1 ==
+BookMyShowSystem -> BookingService : bookSeats(User1, seats[1,2])
+BookingService -> ShowService : getShow(showId)
+ShowService -> ShowRepository : getShow(showId)
+ShowRepository --> ShowService : Show details
+ShowService --> BookingService : Show details
+
+BookingService -> SeatStatusMap : check seat 1 → VACANT
+BookingService -> SeatStatusMap : check seat 2 → VACANT
+BookingService -> PaymentService : processPayment(booking, amount, strategy)
+PaymentService -> CreditCardPayment : pay(booking, amount)
+CreditCardPayment --> PaymentService : payment success
+PaymentService --> BookingService : payment success
+BookingService -> SeatStatusMap : mark seats 1, 2 as BOOKED
+BookingService -> BookingRepository : saveBooking(booking)
+BookingRepository --> BookingService : saved
+BookingService --> BookMyShowSystem : booking confirmed
+
+== Booking Request for User2 ==
+BookMyShowSystem -> BookingService : bookSeats(User2, seats[2,3])
+BookingService -> ShowService : getShow(showId)
+ShowService -> ShowRepository : getShow(showId)
+ShowRepository --> ShowService : Show details
+ShowService --> BookingService : Show details
+
+BookingService -> SeatStatusMap : check seat 2 → BOOKED
+BookingService --> BookMyShowSystem : Exception("Seat already booked: 2")
+@enduml

@@ -1,0 +1,196 @@
+@startuml
+!theme plain
+title BookMyShow - Class/ER Diagram
+
+'========================
+' ENUMS
+'========================
+enum SeatStatus {
+    VACANT
+    BOOKED
+}
+note right of SeatStatus
+  Seat availability status
+end note
+
+enum SeatCategory {
+    NORMAL
+    EXECUTIVE
+    PREMIUM
+    VIP
+}
+note right of SeatCategory
+  Seat types with pricing and comfort variations
+end note
+
+enum BookingStatus {
+    CREATED
+    CONFIRMED
+    CANCELLED
+}
+note right of BookingStatus
+  Booking lifecycle states
+end note
+
+enum LANGUAGE {
+    ENGLISH
+    HINDI
+}
+note right of LANGUAGE
+  Movie language options
+end note
+
+enum MovieStatus {
+    AVAILABLE
+    NOT_AVAILABLE
+}
+note right of MovieStatus
+  Current screening status of a movie
+end note
+
+'========================
+' ENTITIES
+'========================
+class User {
+    + userId: Long
+    + name: String
+    + email: String
+}
+note right of User
+  Immutable user info ensures data consistency during booking
+end note
+
+class Seat {
+    + seatId: Long
+    + row: int
+    + category: SeatCategory
+}
+note right of Seat
+  Overrides equals() and hashCode() for correct behavior in collections
+end note
+
+class Screen {
+    + screenId: Long
+    + name: String
+    + seats: List<Seat>
+}
+note right of Screen
+  Uses composition to manage seats flexibly
+end note
+
+class Theatre {
+    + theatreId: Long
+    + name: String
+    + screens: List<Screen>
+}
+note right of Theatre
+  Manages multiple screens in one venue
+end note
+
+class Movie {
+    + movieId: Long
+    + name: String
+    + type: LANGUAGE
+    + status: MovieStatus
+}
+note right of Movie
+  Movie details and availability
+end note
+
+class Show {
+    + showId: Long
+    + movie: Movie
+    + startTime: Date
+    + theatres: Set<Theatre>
+}
+note right of Show
+  Avoids duplicates using Set, faster lookup
+end note
+
+class Booking {
+    + bookingId: Long
+    + user: User
+    + show: Show
+    + status: BookingStatus
+}
+note right of Booking
+  Tracks booking events without subclassing state
+end note
+
+'========================
+' REPOSITORIES
+'========================
+class ShowRepository {
+    + saveShow(show: Show)
+    + getShow(showId: Long): Show
+}
+note right of ShowRepository
+  Abstracts show persistence logic
+end note
+
+class BookingRepository {
+    + saveBooking(booking: Booking)
+    + getBooking(bookingId: Long): Booking
+}
+note right of BookingRepository
+  Abstracts booking persistence logic
+end note
+
+'========================
+' SERVICES
+'========================
+class ShowService {
+    + getShow(showId: Long): Show
+    + addShow(show: Show)
+}
+note right of ShowService
+  Handles show retrieval and addition
+end note
+
+class BookingService {
+    + bookSeats(user: User, showId: Long, theatreId: Long, screenId: Long, seatIds: List<Long>, strategy: PaymentStrategy, amount: double): Booking
+}
+note right of BookingService
+  Coordinates booking flow with lock-based concurrency control
+end note
+
+class PaymentService {
+    + processPayment(booking: Booking, amount: double, strategy: PaymentStrategy): boolean
+}
+note right of PaymentService
+  Payment processing using strategy pattern
+end note
+
+'========================
+' INTERFACES
+'========================
+interface PaymentStrategy {
+    + pay(booking: Booking, amount: double): boolean
+}
+note right of PaymentStrategy
+  Extensible payment mechanism interface
+end note
+
+class CreditCardPayment {
+    + pay(booking: Booking, amount: double): boolean
+}
+note right of CreditCardPayment
+  Concrete payment method implementation
+end note
+
+'========================
+' RELATIONSHIPS
+'========================
+Show "1" -- "1" Movie : "features"
+Show "1" -- "0..*" Theatre : "in"
+Theatre "1" -- "0..*" Screen : "has"
+Screen "1" -- "0..*" Seat : "contains"
+Booking "1" -- "1" User : "by"
+Booking "1" -- "1" Show : "for"
+ShowService o-- ShowRepository : "uses"
+BookingService o-- BookingRepository : "uses"
+BookingService o-- ShowService : "uses"
+BookingService o-- PaymentService : "uses"
+PaymentService o-- PaymentStrategy : "uses"
+PaymentStrategy <|.. CreditCardPayment
+@enduml
