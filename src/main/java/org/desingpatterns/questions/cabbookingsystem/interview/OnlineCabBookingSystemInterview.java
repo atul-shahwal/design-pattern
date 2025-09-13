@@ -7,6 +7,26 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 /**
+ * Interview Q&A: What kinds of classes and objects are used in this system?
+ * Answer:
+ * 1. Entities – User, Driver, Ride, Location, Vehicle to represent domain data.
+ * 2. State pattern – RideState and its implementations to handle ride lifecycle.
+ * 3. Strategy pattern – MatchingStrategy to encapsulate different driver assignment logic.
+ * 4. Services – DriverService and RideService to manage business logic.
+ * 5. Utility – GeoUtils for reusable geographic calculations.
+ * 6. Concurrency tools – AtomicReference, ReentrantLock for thread safety.
+ *
+ * Interview Q&A: What future action items can be considered?
+ * Answer:
+ * 1. Integrate payment processing.
+ * 2. Implement surge pricing and cancellation policies.
+ * 3. Add persistence with database or caching layers.
+ * 4. Introduce better spatial indexing like QuadTrees or GeoHashing.
+ * 5. Implement fault tolerance and retry logic.
+ */
+
+
+/**
  * Interview Q&A: What are the main states a ride can be in?
  * Answer: A ride can be in one of these states: REQUESTED, DRIVER_ASSIGNED,
  * IN_PROGRESS, COMPLETED, or CANCELLED. This helps manage the ride lifecycle.
@@ -16,6 +36,12 @@ enum RideStatus {
 }
 
 /**
+ *Interview Q&A: Why track ride statuses using enums?
+ * Answer:
+ * 1. Provides a controlled set of valid states.
+ * 2. Helps avoid magic strings and makes state transitions predictable.
+ * 3. Improves readability and debugging.
+ *
  * Interview Q&A: What are the possible statuses for a driver?
  * Answer: A driver can be OFFLINE (not available for rides), ONLINE (available for rides),
  * or IN_RIDE (currently serving a ride).
@@ -29,6 +55,12 @@ enum DriverStatus {
  * Answer: The Location class is crucial because it represents geographic coordinates
  * that are used for tracking users and drivers, calculating distances, and determining
  * optimal driver assignments based on proximity.
+ *
+ * * Interview Q&A: Why include timestamp in location?
+ *  * Answer:
+ *  * 1. Helps track freshness of location data.
+ *  * 2. Supports auditing and debugging.
+ *  * 3. Enables logic like detecting stale location updates.
  */
 class Location {
     double latitude;
@@ -50,6 +82,11 @@ class Location {
  * 3. Current location for ride matching
  * 4. Payment information (not shown in this simplified example)
  * 5. Ride history (not shown in this simplified example)
+ *
+ *Interview Q&A: Why is the location stored using AtomicReference?
+ * Answer:
+ * 1. Concurrent location updates can happen from multiple sources.
+ *  2. AtomicReference ensures updates are consistent without locking.
  */
 class User {
     String userId;
@@ -103,6 +140,12 @@ class Vehicle {
  * 3. Maintaining driver rating and performance metrics
  * 4. Managing vehicle information
  * 5. Handling availability for new ride requests
+ *
+ * Interview Q&A: Why separate status and availability fields?
+ * Answer:
+ *  1. Status shows what the driver is doing.
+ *  2. Availability controls whether they can accept new rides.
+ *  3. Separating allows more granular control and better state management.
  */
 class Driver {
     String driverId;
@@ -150,7 +193,6 @@ class Driver {
      * when updating the driver's rating and total rides count.
      */
     void updateRating(double newRating) {
-        // Thread-safe rating update
         while (true) {
             double currentRating = this.rating;
             int currentTotalRides = this.totalRides;
@@ -201,6 +243,13 @@ class RequestedState implements RideState {
     public void requestRide(Ride ride) {
         throw new IllegalStateException("Ride already requested");
     }
+
+    /**
+     * Interview Q&A: Why check driver availability before assignment?
+     * Answer:
+     * 1. Prevents assigning an offline or already in-ride driver.
+     * 2. Ensures system integrity and fairness.
+     */
 
     @Override
     public void assignDriver(Ride ride, Driver driver) {
@@ -260,6 +309,14 @@ class AssignedState implements RideState {
         throw new IllegalStateException("Ride already assigned to a driver");
     }
 
+    /**
+     * Interview Q&A: What should happen when a ride starts?
+     * Answer:
+     * 1. Update timestamps.
+     * 2. Change state to in-progress.
+     * 3. Lock the driver for this ride.
+     */
+
     @Override
     public void startRide(Ride ride) {
         ride.startTime = System.currentTimeMillis();
@@ -315,6 +372,13 @@ class InProgressState implements RideState {
     public void startRide(Ride ride) {
         throw new IllegalStateException("Ride already started");
     }
+
+    /**
+     * Interview Q&A: Why must a ride complete properly before marking it so?
+     * Answer:
+     * 1. Fare must be calculated after journey details are available.
+     * 2. Driver must be released for new rides.
+     */
 
     @Override
     public void completeRide(Ride ride) {
@@ -424,6 +488,13 @@ class CancelledState implements RideState {
     public void cancelRide(Ride ride) {
         throw new IllegalStateException("Ride already cancelled");
     }
+    /**
+     * Interview Q&A: Why prevent further actions on cancelled rides?
+     * Answer:
+     * 1. Avoid inconsistent state.
+     * 2. Maintain audit trails and integrity.
+     */
+
 
     @Override
     public RideStatus getStatus() {
@@ -520,10 +591,11 @@ class Ride {
      * 4. Surge pricing - multiplier during high demand
      * 5. Minimum fare - ensuring the driver gets paid fairly for short rides
      * 6. Additional charges - tolls, waiting time, etc.
+     *
      */
     void calculateFare() {
         // Calculate distance in km
-        double distance = calculateDistance(pickupLocation, dropoffLocation);
+        double distance = GeoUtils.calculateDistance(pickupLocation, dropoffLocation);
 
         // Calculate time in minutes
         long durationMinutes = (endTime - startTime) / (60 * 1000);
@@ -536,28 +608,6 @@ class Ride {
         this.fare = Math.max(MINIMUM_FARE, BASE_FARE + distanceFare + timeFare);
     }
 
-    /**
-     * Interview Q&A: How does the Haversine formula work for distance calculation?
-     * Answer: The Haversine formula calculates the great-circle distance between two points
-     * on a sphere given their longitudes and latitudes. It's more accurate than simple
-     * Euclidean distance for geographical coordinates because it accounts for Earth's curvature.
-     */
-    private double calculateDistance(Location loc1, Location loc2) {
-        // Haversine formula implementation
-        final int R = 6371; // Earth's radius in km
-
-        double lat1 = Math.toRadians(loc1.latitude);
-        double lat2 = Math.toRadians(loc2.latitude);
-        double deltaLat = Math.toRadians(loc2.latitude - loc1.latitude);
-        double deltaLon = Math.toRadians(loc2.longitude - loc1.longitude);
-
-        double a = Math.sin(deltaLat/2) * Math.sin(deltaLat/2) +
-                Math.cos(lat1) * Math.cos(lat2) *
-                        Math.sin(deltaLon/2) * Math.sin(deltaLon/2);
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-
-        return R * c;
-    }
 }
 
 /**
@@ -595,7 +645,7 @@ class DistanceBasedMatching implements MatchingStrategy {
         double minDistance = Double.MAX_VALUE;
 
         for (Driver driver : availableDrivers) {
-            double distance = calculateDistance(
+            double distance = GeoUtils.calculateDistance(
                     ride.pickupLocation,
                     driver.currentLocation.get()
             );
@@ -607,43 +657,6 @@ class DistanceBasedMatching implements MatchingStrategy {
         }
 
         return closestDriver;
-    }
-    /**
-     * Interview Q&A: How does the Haversine formula work for distance calculation?
-     * Answer:
-     * The Haversine formula calculates the great-circle distance between two points
-     * on a sphere given their latitudes and longitudes. It is more accurate than using
-     * simple Euclidean distance because it accounts for the Earth's curvature.
-     *
-     * Mathematical formula:
-     *
-     * a = sin²(Δφ / 2) + cos(φ1) * cos(φ2) * sin²(Δλ / 2)
-     * c = 2 * atan2(√a, √(1 − a))
-     * d = R * c
-     *
-     * where:
-     * - φ1, φ2 are the latitudes of the two points in radians
-     * - λ1, λ2 are the longitudes of the two points in radians
-     * - Δφ = φ2 - φ1 is the difference in latitude
-     * - Δλ = λ2 - λ1 is the difference in longitude
-     * - R is the Earth's radius (mean radius = 6371 km)
-     * - d is the calculated distance between the two points along the surface of the sphere
-     *
-     */
-    private double calculateDistance(Location loc1, Location loc2) {
-        final int R = 6371; // Earth's radius in km
-
-        double lat1 = Math.toRadians(loc1.latitude);
-        double lat2 = Math.toRadians(loc2.latitude);
-        double deltaLat = Math.toRadians(loc2.latitude - loc1.latitude);
-        double deltaLon = Math.toRadians(loc2.longitude - loc1.longitude);
-
-        double a = Math.sin(deltaLat/2) * Math.sin(deltaLat/2) +
-                Math.cos(lat1) * Math.cos(lat2) *
-                        Math.sin(deltaLon/2) * Math.sin(deltaLon/2);
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-
-        return R * c;
     }
 }
 
@@ -657,6 +670,13 @@ class DistanceBasedMatching implements MatchingStrategy {
  */
 class DriverService {
     Map<String, Driver> drivers;
+    /**
+     * Interview Q&A: Why maintain a separate availableDrivers list?
+     * Answer:
+     * 1. Speeds up filtering nearby drivers.
+     * 2. Avoids scanning inactive drivers repeatedly.
+     */
+
     List<Driver> availableDrivers;
 
     DriverService() {
@@ -699,6 +719,11 @@ class DriverService {
     }
 
     /**
+     *  * Interview Q&A: What’s the limitation of linear search for drivers?
+     *  * Answer:
+     *  * 1. Inefficient for large datasets.
+     *  * 2. Can be optimized using spatial indexing techniques.
+     *
      * Interview Q&A: How would you find nearby drivers without spatial indexing?
      * Answer: Without spatial indexing, we can use a linear search through all available
      * drivers, calculating the distance from the pickup location to each driver's location.
@@ -709,7 +734,7 @@ class DriverService {
 
         for (Driver driver : availableDrivers) {
             if (driver.currentLocation.get() != null) {
-                double distance = calculateDistance(location, driver.currentLocation.get());
+                double distance = GeoUtils.calculateDistance(location, driver.currentLocation.get());
                 if (distance <= radiusKm) {
                     nearbyDrivers.add(driver);
                 }
@@ -717,46 +742,6 @@ class DriverService {
         }
 
         return nearbyDrivers;
-    }
-
-    /**
-     * Interview Q&A: How does the Haversine formula work for distance calculation?
-     * Answer:
-     * The Haversine formula calculates the great-circle distance between two points
-     * on a sphere given their latitudes and longitudes. It is more accurate than using
-     * simple Euclidean distance because it accounts for the Earth's curvature.
-     *
-     * Mathematical formula:
-     *
-     * a = sin²(Δφ / 2) + cos(φ1) * cos(φ2) * sin²(Δλ / 2)
-     * c = 2 * atan2(√a, √(1 − a))
-     * d = R * c
-     *
-     * where:
-     * - φ1, φ2 are the latitudes of the two points in radians
-     * - λ1, λ2 are the longitudes of the two points in radians
-     * - Δφ = φ2 - φ1 is the difference in latitude
-     * - Δλ = λ2 - λ1 is the difference in longitude
-     * - R is the Earth's radius (mean radius = 6371 km)
-     * - d is the calculated distance between the two points along the surface of the sphere
-     */
-    private double calculateDistance(Location loc1, Location loc2) {
-        final int R = 6371; // Earth's radius in kilometers
-
-        // Convert latitude and longitude from degrees to radians
-        double lat1 = Math.toRadians(loc1.latitude); // φ1
-        double lat2 = Math.toRadians(loc2.latitude); // φ2
-        double deltaLat = Math.toRadians(loc2.latitude - loc1.latitude); // Δφ
-        double deltaLon = Math.toRadians(loc2.longitude - loc1.longitude); // Δλ
-
-        // Apply the Haversine formula
-        double a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) + // sin²(Δφ / 2)
-                Math.cos(lat1) * Math.cos(lat2) *                 // cos(φ1) * cos(φ2)
-                        Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);   // sin²(Δλ / 2)
-
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));    // 2 * atan2(√a, √(1 − a))
-
-        return R * c; // d = R * c
     }
 
 
@@ -786,6 +771,14 @@ class RideService {
     }
 
     /**
+     *
+     *  * Interview Q&A: What are key steps in assigning a ride?
+     *  * Answer:
+     *  * 1. Generate a unique ride ID.
+     *  * 2. Find nearby drivers.
+     *  * 3. Match the best driver based on strategy.
+     *  * 4. Handle cases when no driver is found.
+     *
      * Interview Q&A: What steps are involved in processing a ride request?
      * Answer: Processing a ride request involves:
      * 1. Creating a ride object with user and location details
@@ -842,6 +835,73 @@ class RideService {
         return activeRides.get(rideId);
     }
 }
+
+
+/**
+ * Interview Q&A: Why create a utility class for geographical calculations?
+ * Answer:
+ * 1. To avoid code duplication across services and strategies.
+ * 2. To ensure a single source of truth for distance calculation.
+ * 3. To improve maintainability and readability.
+ * 4. To make it easier to test and extend in the future.
+ */
+class GeoUtils {
+
+    private GeoUtils() {
+        // Private constructor to prevent instantiation
+    }
+
+    /**
+     *
+     *Interview Q&A: Why use the Haversine formula?
+     * Answer:
+     * 1. Accurately accounts for Earth's curvature.
+     * 2. Better than flat-earth approximations.
+     * 3. Suitable for longer distances.
+     * Calculates the great-circle distance between two geographic coordinates using the Haversine formula.
+     *
+     * @param loc1 First location
+     * @param loc2 Second location
+     * @return Distance in kilometers
+     *
+     * Interview Q&A: How does the Haversine formula work for distance calculation?
+     * Answer:
+     * The Haversine formula calculates the great-circle distance between two points
+     * on a sphere given their latitudes and longitudes. It is more accurate than using
+     * simple Euclidean distance because it accounts for the Earth's curvature.
+     *
+     * Mathematical formula:
+     *
+     * a = sin²(Δφ / 2) + cos(φ1) * cos(φ2) * sin²(Δλ / 2)
+     * c = 2 * atan2(√a, √(1 − a))
+     * d = R * c
+     *
+     * where:
+     * - φ1, φ2 are the latitudes of the two points in radians
+     * - λ1, λ2 are the longitudes of the two points in radians
+     * - Δφ = φ2 - φ1 is the difference in latitude
+     * - Δλ = λ2 - λ1 is the difference in longitude
+     * - R is the Earth's radius (mean radius = 6371 km)
+     * - d is the calculated distance between the two points along the surface of the sphere
+     */
+    public static double calculateDistance(Location loc1, Location loc2) {
+        final int R = 6371; // Earth's radius in km
+
+        double lat1 = Math.toRadians(loc1.latitude);
+        double lat2 = Math.toRadians(loc2.latitude);
+        double deltaLat = Math.toRadians(loc2.latitude - loc1.latitude);
+        double deltaLon = Math.toRadians(loc2.longitude - loc1.longitude);
+
+        double a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+                Math.cos(lat1) * Math.cos(lat2) *
+                        Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
+
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+        return R * c;
+    }
+}
+
 
 // Main class to demonstrate the system
 public class OnlineCabBookingSystemInterview {
