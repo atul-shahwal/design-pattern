@@ -30,7 +30,20 @@ import java.util.Map;
  * 4. If successful, cash is dispensed, and card is ejected → system returns to IdleState.
  */
 
-// Enum representing cash denominations
+
+
+
+/**
+ * CashType represents the available denominations in the ATM.
+ * Each denomination is associated with a specific value.
+ *
+ * ▶ Cross Questions:
+ * Q1: Why use an enum for denominations instead of constants?
+ * A1: Enums provide type safety and are easier to maintain, especially when more denominations are added.
+ *
+ * Q2: Why store the value as an instance field?
+ * A2: It allows easy access to the denomination value for calculations like inventory and dispensing.
+ */
 enum CashType {
     BILL_100(100), BILL_50(50), BILL_20(20), BILL_10(10), BILL_5(5), BILL_1(1);
 
@@ -41,7 +54,17 @@ enum CashType {
     }
 }
 
-// Represents user's bank card
+/**
+ * Represents a bank card with card number, PIN, and account association.
+ * Handles PIN validation for secure authentication.
+ *
+ * ▶ Cross Questions:
+ * Q1: Why is PIN stored inside the Card object instead of a separate service?
+ * A1: For simplicity in this design. In a real-world system, PIN would be stored securely in a database or encrypted format.
+ *
+ * Q2: How would you enhance security if scaling this application?
+ * A2: Implement encryption for PINs, use secure storage mechanisms, and apply multi-factor authentication.
+ */
 class Card {
     private String cardNumber;
     private int pin;
@@ -62,7 +85,17 @@ class Card {
     }
 }
 
-// Represents user's bank account
+/**
+ * Represents a user's bank account with account number and balance.
+ * Supports withdrawal and deposit operations ensuring funds consistency.
+ *
+ * ▶ Cross Questions:
+ * Q1: How would you ensure thread safety if multiple ATMs access the same account?
+ * A1: Implement locking mechanisms or transaction handling in the database layer to ensure atomicity.
+ *
+ * Q2: Why withdraw method checks balance first?
+ * A2: To prevent overdraft and ensure that withdrawals don't exceed available funds.
+ */
 class Account {
     private String accountNumber;
     private double balance;
@@ -93,7 +126,18 @@ class Account {
     }
 }
 
-// Manages ATM's cash inventory
+/**
+ * Manages ATM's cash inventory using different denominations.
+ * Provides functionality to check available cash and dispense it during withdrawal.
+ *
+ * ▶ Cross Questions:
+ * Q1: Why use a map to store denominations and their count?
+ * A1: Allows dynamic management of cash quantities and efficient lookups by denomination.
+ *
+ * Q2: How would you handle cases where the ATM doesn't have exact denominations?
+ * A2: Implement fallback strategies or error handling to cancel the transaction and refund the user.
+ */
+
 class ATMInventory {
     private Map<CashType, Integer> cashInventory;
 
@@ -150,18 +194,40 @@ class ATMInventory {
     }
 }
 
-// Enum for transaction types
+/**
+ * Enum to define transaction types supported by the ATM.
+ * It helps in selecting and processing transactions like withdrawal or balance inquiry.
+ *
+ * ▶ Cross Questions:
+ * Q1: Why use an enum instead of strings or integers?
+ * A1: Enums provide type safety, are self-documenting, and prevent invalid transaction types.
+ */
 enum TransactionType {
     WITHDRAW_CASH, CHECK_BALANCE
 }
 
-// State interface
+/**
+ * Interface representing the state of the ATM.
+ * It enforces methods for state-specific behavior and state transitions.
+ *
+ * ▶ Cross Questions:
+ * Q1: Why use the state pattern here instead of if-else logic?
+ * A1: State pattern separates state-specific behavior, makes the code easier to extend and maintain.
+ *
+ * Q2: How does this design improve scalability?
+ * A2: Adding new states only requires implementing the interface without changing existing code.
+ */
 interface ATMState {
     String getStateName();
     void handleState(ATMMachine context);
 }
 
-// Concrete states
+/**
+ * IdleState represents the initial state of the ATM, prompting users to insert a card.
+ * ▶ Cross Questions:
+ * Q1: How would you manage transitions from idle to other states?
+ * A1: By calling setState() from the context based on user actions.
+ */
 class IdleState implements ATMState {
     @Override
     public String getStateName() { return "IdleState"; }
@@ -171,6 +237,12 @@ class IdleState implements ATMState {
         System.out.println("Please insert your card");
     }
 }
+/**
+ * SelectOperationState represents the state where the ATM waits for the user to choose a transaction.
+ * ▶ Cross Questions:
+ * Q1: How would you design the UI integration for transaction selection?
+ * A1: Use event-driven input or callback methods connected to UI elements.
+ */
 
 class HasCardState implements ATMState {
     @Override
@@ -181,7 +253,12 @@ class HasCardState implements ATMState {
         System.out.println("Please enter your PIN");
     }
 }
-
+/**
+ * SelectOperationState represents the state where the ATM waits for the user to choose a transaction.
+ * ▶ Cross Questions:
+ * Q1: How would you design the UI integration for transaction selection?
+ * A1: Use event-driven input or callback methods connected to UI elements.
+ */
 class SelectOperationState implements ATMState {
     @Override
     public String getStateName() { return "SelectOperationState"; }
@@ -191,7 +268,12 @@ class SelectOperationState implements ATMState {
         System.out.println("Select operation: 1. Withdraw 2. Check Balance");
     }
 }
-
+/**
+ * TransactionState represents the state where the ATM processes the selected transaction.
+ * ▶ Cross Questions:
+ * Q1: How would you ensure transaction consistency in this state?
+ * A1: Use locks, transactions, or rollback mechanisms in case of failure.
+ */
 class TransactionState implements ATMState {
     @Override
     public String getStateName() { return "TransactionState"; }
@@ -201,8 +283,20 @@ class TransactionState implements ATMState {
         System.out.println("Processing transaction...");
     }
 }
-
-// Main ATM machine class
+/**
+ * ATMMachine orchestrates operations by managing states, current account, and cash inventory.
+ * It handles transitions between states and provides functionality like authentication, transaction processing, and card ejection.
+ *
+ * ▶ Cross Questions:
+ * Q1: Why is the state pattern appropriate here?
+ * A1: It cleanly manages state-specific behaviors without complicating the main class with conditional logic.
+ *
+ * Q2: How would you scale this ATM to handle concurrent users or sessions?
+ * A2: Use session management, thread pools, or distributed architecture with separate services handling account and inventory.
+ *
+ * Q3: How would you integrate logging or monitoring in this design?
+ * A3: Introduce decorators or interceptors in each state to log events and monitor transaction health.
+ */
 class ATMMachine {
     private ATMState currentState;
     private Card currentCard;
@@ -288,8 +382,18 @@ class ATMMachine {
         currentAccount = null;
     }
 }
+/**
+ * Entry point for the ATM simulation.
+ * Demonstrates card insertion, PIN authentication, and withdrawal operation.
+ *
+ * ▶ Cross Questions:
+ * Q1: How would you expand this to handle UI input or network requests?
+ * A1: Replace hardcoded input with user interfaces, REST APIs, or message queues.
+ *
+ * Q2: How would you test this system?
+ * A2: Create unit tests for each state, transaction, and edge cases like invalid PINs and insufficient funds.
+ */
 
-// Demo class
 public class ATMSystem {
     public static void main(String[] args) {
         ATMMachine atm = new ATMMachine();
