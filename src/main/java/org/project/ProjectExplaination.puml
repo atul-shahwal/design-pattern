@@ -1,0 +1,318 @@
+@startuml
+skinparam componentStyle rectangle
+skinparam linetype ortho
+skinparam nodesep 20
+skinparam ranksep 20
+skinparam NoteBackgroundColor #F0F8FF
+skinparam NoteBorderColor #000080
+
+title Amazon Pay SmartStores QR System Architecture\nWith Dynamic QR Reward System and Interview Q&A
+
+package "Client Layer" {
+  [Mobile Client] as MOBILE
+  note right of MOBILE
+    <b>Mobile Client</b>
+    --
+    Users scan QR and navigate through store options.
+    <b>Interview Q&A</b>
+    --
+    Q: Why is the client responsible for initiating QR scan?
+    A: To ensure secure, user-driven interactions without server polling.
+  end note
+
+  [Promoter Mobile App] as PROMOTER_APP #pink
+  note right of PROMOTER_APP
+    <b>Promoter Mobile App</b>
+    --
+    Used by store promoters to scan dynamic QR codes and claim rewards.
+    <b>Interview Q&A</b>
+    --
+    Q: How do promoters claim rewards securely?
+    A: They scan encrypted QR containing signed transaction data, validated server-side by Rewards Service.
+  end note
+
+  [Amazon Pay\nSmartStores QR] as QR
+  note right of QR
+    <b>QR Entry Point</b>
+    --
+    Starts user flow by scanning QR in the store.
+    <b>Interview Q&A</b>
+    --
+    Q: Why scan QR instead of manually entering store details?
+    A: Provides location-aware service, reduces manual errors, and enhances security.
+  end note
+}
+
+package "Network Layer" {
+  [Network Load Balancer\n(WAF, Filtering)] as NLB
+  note right of NLB
+    <b>Network Load Balancer</b>
+    --
+    Filters malicious traffic and forwards requests to API Gateway.
+    <b>Interview Q&A</b>
+    --
+    Q: How does WAF integration enhance security?
+    A: Prevents injection attacks and DDoS attempts, ensuring only legitimate traffic is processed.
+  end note
+
+  [CDN] as CDN #lightblue
+  note right of CDN
+    <b>CDN</b>
+    --
+    Delivers static assets like images, CSS, and JS efficiently.
+    <b>Interview Q&A</b>
+    --
+    Q: Why is CDN used for store pages?
+    A: Reduces latency and server load by caching content closer to users.
+  end note
+}
+
+package "API Layer" {
+  [API Gateway] as APIGW
+  note right of APIGW
+    <b>API Gateway</b>
+    --
+    Routes incoming requests to appropriate backend services.
+    <b>Interview Q&A</b>
+    --
+    Q: Why use API Gateway instead of direct service calls?
+    A: Provides centralized routing, authentication, and rate limiting, ensuring scalability and security.
+  end note
+}
+
+package "Frontend Layer" {
+  [Store Page] as STORE_PAGE
+  note right of STORE_PAGE
+    <b>Store Page</b>
+    --
+    Common entry for all flows where products or payment options are displayed.
+    <b>Interview Q&A</b>
+    --
+    Q: Why is this page a common entry point?
+    A: Simplifies navigation, reduces state management, and allows users to choose their flow easily.
+  end note
+
+  [Product Details Page] as PRODUCT_PAGE #lightgreen
+  note right of PRODUCT_PAGE
+    <b>Product Details Page</b>
+    --
+    Displays product information and reward options.
+    <b>Interview Q&A</b>
+    --
+    Q: How do you ensure consistency of product details?
+    A: By integrating with Store Service and caching responses for quick load times.
+  end note
+
+  [Enter Amount Page] as AMOUNT_PAGE #lightgreen
+  note right of AMOUNT_PAGE
+    <b>Enter Amount Page</b>
+    --
+    Allows non-listed product payments by selecting brand-specific details.
+    <b>Interview Q&A</b>
+    --
+    Q: How do you handle dynamic form fields?
+    A: Based on brand config from DDB and distributed caching, forms adapt in real time.
+  end note
+
+  [Payment Page] as PAYMENT_PAGE
+  note right of PAYMENT_PAGE
+    <b>Payment Page</b>
+    --
+    User selects payment method and makes payment.
+    <b>Interview Q&A</b>
+    --
+    Q: How do you ensure transaction reliability?
+    A: Through atomic DB operations and integration with Payment Service that confirms transaction status.
+  end note
+
+  [Thank You Page] as THANKYOU_PAGE #lightgreen
+  note right of THANKYOU_PAGE
+    <b>Thank You Page</b>
+    --
+    Shows transaction confirmation and dynamic QR for reward claiming.
+    <b>Interview Q&A</b>
+    --
+    Q: Why is QR generated after payment?
+    A: To ensure only successful transactions trigger reward claims, minimizing fraudulent activity.
+  end note
+}
+
+package "Service Layer" {
+  [Store Service\n(ECS Fargate)] as STORE_SERVICE
+  note right of STORE_SERVICE
+    <b>Store Service</b>
+    --
+    Manages product listing and caching operations.
+    <b>Interview Q&A</b>
+    --
+    Q: Why use ECS Fargate for this service?
+    A: Provides serverless containers that scale automatically based on demand.
+  end note
+
+  [Pre-Validation Service] as PRE_VALIDATION
+  note right of PRE_VALIDATION
+    <b>Pre-Validation Service</b>
+    --
+    Validates non-listed products before allowing payment.
+    <b>Interview Q&A</b>
+    --
+    Q: How are brand-specific validations handled?
+    A: Calls Brand Service with product details, maps error codes to user-friendly messages.
+  end note
+
+  [Brand Service] as BRAND_SERVICE #lightgreen
+  note right of BRAND_SERVICE
+    <b>Brand Service</b>
+    --
+    Handles validation rules and reward eligibility based on brand.
+    <b>Interview Q&A</b>
+    --
+    Q: How do you support multiple brands with different rules?
+    A: Config-driven approach using DDB and caching layers ensures flexibility and scalability.
+  end note
+
+  [Payment Service] as PAYMENT_SERVICE
+  note right of PAYMENT_SERVICE
+    <b>Payment Service</b>
+    --
+    Processes payments and ensures transaction persistence.
+    <b>Interview Q&A</b>
+    --
+    Q: How is payment failure handled?
+    A: Transactions are only recorded upon successful confirmation from payment gateway.
+  end note
+
+  [Rewards Service] as REWARDS_SERVICE #pink
+  note right of REWARDS_SERVICE
+    <b>Rewards Service (Sister Team)</b>
+    --
+    Handles reward processing when QR is scanned.
+    <b>Interview Q&A</b>
+    --
+    Q: How do you ensure secure reward claiming?
+    A: Encrypted QR payload verified by our sister team’s reward engine ensures integrity.
+  end note
+
+  [Dynamic QR Service] as QR_SERVICE #lightgreen
+  note right of QR_SERVICE
+    <b>Dynamic QR Service</b>
+    --
+    Generates secure QR codes post-transaction.
+    <b>Interview Q&A</b>
+    --
+    Q: How is QR tampering prevented?
+    A: QR includes signed payloads with expiration timestamps verified during reward claim.
+  end note
+}
+
+package "Data Layer" {
+  database "Redis Cluster\n(Store Cache)" as STORE_CACHE
+  note right of STORE_CACHE
+    <b>Store Cache</b>
+    --
+    Caches product data to speed up response times.
+    <b>Interview Q&A</b>
+    --
+    Q: Why caching is important for Store Service?
+    A: Reduces latency and load on backend databases.
+  end note
+
+  database "Brand Configuration DDB" as BRAND_DB #lightgreen
+  note right of BRAND_DB
+    <b>Brand Configuration DDB</b>
+    --
+    Stores brand-specific rules and error messages.
+    <b>Interview Q&A</b>
+    --
+    Q: How is data consistency maintained?
+    A: Uses eventual consistency with caching strategies to balance performance and accuracy.
+  end note
+
+  database "DynamoDB\n(Orders)" as ORDERS_DB
+  note right of ORDERS_DB
+    <b>Orders DB</b>
+    --
+    Persists order-related information.
+    <b>Interview Q&A</b>
+    --
+    Q: Why separate orders from transactions?
+    A: Orders represent intent, whereas transactions confirm actual payment status.
+  end note
+
+  database "DynamoDB\n(Transactions)" as TRANSACTIONS_DB #lightgreen
+  note right of TRANSACTIONS_DB
+    <b>Transactions DB</b>
+    --
+    Stores details of completed payments.
+    <b>Interview Q&A</b>
+    --
+    Q: How is atomicity ensured in transaction storage?
+    A: Uses DynamoDB’s conditional writes and transaction features to prevent double entries.
+  end note
+}
+
+package "Messaging Layer" {
+  [Amazon SNS] as SNS
+  note right of SNS
+    <b>Amazon SNS</b>
+    --
+    Sends notifications for validation errors and retries.
+    <b>Interview Q&A</b>
+    --
+    Q: Why use SNS instead of direct retries?
+    A: Provides decoupled architecture with durable message delivery guarantees.
+  end note
+
+  [Dead Letter Queue] as DLQ
+  note right of DLQ
+    <b>Dead Letter Queue</b>
+    --
+    Captures failed messages for later inspection or retry.
+    <b>Interview Q&A</b>
+    --
+    Q: How do you monitor failures effectively?
+    A: Logs and alerts can be configured to track messages in DLQ, ensuring no data is lost.
+  end note
+}
+
+' Connections
+MOBILE --> QR
+QR --> NLB
+PROMOTER_APP --> REWARDS_SERVICE
+
+NLB --> APIGW
+APIGW --> STORE_PAGE
+
+STORE_PAGE --> STORE_SERVICE
+STORE_SERVICE --> STORE_CACHE
+STORE_SERVICE --> ORDERS_DB
+
+STORE_PAGE --> AMOUNT_PAGE
+AMOUNT_PAGE --> PAYMENT_PAGE
+PAYMENT_PAGE --> THANKYOU_PAGE
+THANKYOU_PAGE --> QR_SERVICE
+QR_SERVICE --> REWARDS_SERVICE
+
+STORE_PAGE --> PRODUCT_PAGE
+PRODUCT_PAGE --> PAYMENT_PAGE
+
+STORE_PAGE --> AMOUNT_PAGE
+AMOUNT_PAGE --> BRAND_SERVICE
+BRAND_SERVICE --> BRAND_DB
+AMOUNT_PAGE --> PRE_VALIDATION
+PRE_VALIDATION --> BRAND_SERVICE
+PRE_VALIDATION --> PAYMENT_PAGE
+
+PAYMENT_PAGE --> PAYMENT_SERVICE
+PAYMENT_SERVICE --> TRANSACTIONS_DB
+STORE_SERVICE --> BRAND_DB
+STORE_SERVICE --> PRE_VALIDATION
+
+PRE_VALIDATION --> SNS
+SNS --> DLQ
+
+CDN --> STORE_PAGE
+CDN --> PRODUCT_PAGE
+CDN --> AMOUNT_PAGE
+
+@enduml
