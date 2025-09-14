@@ -3,6 +3,7 @@ package org.desingpatterns.questions.loggingsystem.inteview;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -248,14 +249,14 @@ class FileAppender implements LogAppender {
 💡 Answer: A single handler is simpler and more efficient for this use case. The core logic is to check if a log message's level is high enough to be processed. A single handler performs this check and appends the message, avoiding the overhead and complexity of passing the message through a chain of identical handlers.
 */
 class LoggerHandler {
-    private final LogAppender appender;
+    private final List<LogAppender> appenders;
 
-    public LoggerHandler(LogAppender appender) {
-        this.appender = appender;
+    public LoggerHandler(List<LogAppender> appender) {
+        this.appenders = appender;
     }
 
     public void handle(LogMessage logMessage) {
-        appender.append(logMessage);
+        appenders.forEach((appender)-> appender.append(logMessage));
     }
 }
 
@@ -265,26 +266,17 @@ class LoggerHandler {
 */
 final class LoggerConfig {
     private final LogLevel logLevel;
-    private final LogAppender logAppender;
+    private final List<LogAppender> logAppenders;
     private final LogFormatter logFormatter;
 
-    public LoggerConfig(LogLevel logLevel, LogAppender logAppender, LogFormatter logFormatter) {
+    public LoggerConfig(LogLevel logLevel, List<LogAppender> logAppenders, LogFormatter logFormatter) {
         this.logLevel = logLevel;
-        this.logAppender = logAppender;
+        this.logAppenders = logAppenders;
         this.logFormatter = logFormatter;
     }
-
-    public LogLevel getLogLevel() {
-        return logLevel;
-    }
-
-    public LogAppender getLogAppender() {
-        return logAppender;
-    }
-
-    public LogFormatter getLogFormatter() {
-        return logFormatter;
-    }
+    public LogLevel getLogLevel() { return logLevel; }
+    public List<LogAppender> getLogAppenders() { return logAppenders; }
+    public LogFormatter getLogFormatter() { return logFormatter; }
 }
 
 /*
@@ -302,7 +294,7 @@ class Logger {
 
     private Logger(LoggerConfig config) {
         this.configRef = new AtomicReference<>(config);
-        this.handlerRef = new AtomicReference<>(new LoggerHandler(config.getLogAppender()));
+        this.handlerRef = new AtomicReference<>(new LoggerHandler(config.getLogAppenders()));
     }
 
     public static Logger getInstance(LoggerConfig config) {
@@ -318,57 +310,27 @@ class Logger {
 
     public void setConfig(LoggerConfig newConfig) {
         this.configRef.set(newConfig);
-        this.handlerRef.set(new LoggerHandler(newConfig.getLogAppender()));
+        this.handlerRef.set(new LoggerHandler(newConfig.getLogAppenders()));
     }
 
     public void log(LogLevel level, String message, Map<String, Object> context) {
         LogLevel configuredLevel = configRef.get().getLogLevel();
-        /* 💡 Corrected Logic: Log if the message level is LESS THAN OR EQUAL to the configured level */
         if (level.isLessOrEqual(configuredLevel)) {
             LogMessage logMessage = new LogMessage(level, message, context);
             handlerRef.get().handle(logMessage);
         }
     }
 
-    public void debug(String message) {
-        debug(message, Map.of());
-    }
-
-    public void debug(String message, Map<String, Object> context) {
-        log(LogLevel.DEBUG, message, context);
-    }
-
-    public void info(String message) {
-        info(message, Map.of());
-    }
-
-    public void info(String message, Map<String, Object> context) {
-        log(LogLevel.INFO, message, context);
-    }
-
-    public void warning(String message) {
-        warning(message, Map.of());
-    }
-
-    public void warning(String message, Map<String, Object> context) {
-        log(LogLevel.WARNING, message, context);
-    }
-
-    public void error(String message) {
-        error(message, Map.of());
-    }
-
-    public void error(String message, Map<String, Object> context) {
-        log(LogLevel.ERROR, message, context);
-    }
-
-    public void fatal(String message) {
-        fatal(message, Map.of());
-    }
-
-    public void fatal(String message, Map<String, Object> context) {
-        log(LogLevel.FATAL, message, context);
-    }
+    public void debug(String message, Map<String, Object> context) { log(LogLevel.DEBUG, message, context); }
+    public void debug(String message) { debug(message, Map.of()); }
+    public void info(String message, Map<String, Object> context) { log(LogLevel.INFO, message, context); }
+    public void info(String message) { info(message, Map.of()); }
+    public void warning(String message, Map<String, Object> context) { log(LogLevel.WARNING, message, context); }
+    public void warning(String message) { warning(message, Map.of()); }
+    public void error(String message, Map<String, Object> context) { log(LogLevel.ERROR, message, context); }
+    public void error(String message) { error(message, Map.of()); }
+    public void fatal(String message, Map<String, Object> context) { log(LogLevel.FATAL, message, context); }
+    public void fatal(String message) { fatal(message, Map.of()); }
 }
 
 /*
@@ -382,67 +344,49 @@ public class loggingSystemDemo {
 
         LogAppender consoleAppender = new ConsoleAppender(simpleFormatter);
 
-    /*
-     💡 Create log file in current project directory dynamically
-    */
         String currentDir = System.getProperty("user.dir");
-        // this below logic dor dir will changes in mac
-        String logFilePath = currentDir + "\\src\\main\\java\\org\\desingpatterns\\questions\\loggingsystem\\gemini\\application.log";
+        //please clean "application.log" file before running if already exist
+        // this is windows dir format use your os specific path
+        String logFilePath = currentDir + "\\src\\main\\java\\org\\desingpatterns\\questions\\loggingsystem\\inteview\\application.log";
         LogAppender fileAppender = new FileAppender(logFilePath, jsonFormatter);
 
-    /*
-     ✅ Test 1: Console Logging with DEBUG level
-     - Should log all messages including DEBUG, INFO, WARNING, ERROR
-     - Context should only appear where explicitly passed
-    */
-        LoggerConfig consoleConfig = new LoggerConfig(LogLevel.DEBUG, consoleAppender, simpleFormatter);
+        /*
+         ✅ Test 1: Console Logging with DEBUG level and multiple appenders
+         */
+        System.out.println("--- Console Logging (DEBUG level set) ---");
+        LoggerConfig consoleConfig = new LoggerConfig(LogLevel.DEBUG, List.of(consoleAppender), simpleFormatter);
         Logger logger = Logger.getInstance(consoleConfig);
 
-        System.out.println("--- Console Logging (DEBUG level set) ---");
-        logger.debug("Debug message: this should appear", Map.of("module", "test-console"));
-        logger.info("Info message: this should appear", Map.of("module", "test-console"));
-        logger.warning("Warning message: this should appear", Map.of("module", "test-console"));
-        logger.error("Error message: this should appear", Map.of("user", "john_doe", "action", "login"));
+        logger.debug("Debug message", Map.of("module", "console-test"));
+        logger.info("Info message", Map.of("module", "console-test"));
+        logger.warning("Warning message", Map.of("module", "console-test"));
+        logger.error("Error message", Map.of("user", "john_doe", "action", "login"));
 
-    /*
-     ✅ Test 2: File Logging with INFO level
-     - Should log messages with level INFO and above
-     - DEBUG messages should not be logged
-     - Context should appear only where provided
-    */
+        /*
+         ✅ Test 2: File Logging with INFO level and multiple appenders
+         */
         System.out.println("\n--- Switching to File Logging (INFO level set) ---");
-        LoggerConfig fileConfig = new LoggerConfig(LogLevel.INFO, fileAppender, jsonFormatter);
+        LoggerConfig fileConfig = new LoggerConfig(LogLevel.INFO, List.of(fileAppender, consoleAppender), jsonFormatter);
         logger.setConfig(fileConfig);
 
-        // DEBUG message → should NOT be logged
-        logger.debug("Debug message: this should be logged", Map.of("module", "test-file"));
+        logger.debug("Debug message: should be logged", Map.of("module", "file-test"));
+        logger.info("Info message: should be logged", Map.of("user", "alice", "operation", "file-write"));
+        logger.warning("Warning message: should not be logged", Map.of("module", "file-test"));
 
-        // INFO message → should be logged with context
-        logger.info("Info message: this should be logged", Map.of("user", "alice", "operation", "file-write"));
+        /*
+         ✅ Test 3: Empty context handling
+         */
+        logger.info("Info message with empty context", Map.of());
 
-        // WARNING message → should be logged with context
-        logger.warning("Warning message: this should be logged", Map.of("module", "test-file"));
-
-        // FATAL message → should be logged with context
-        logger.fatal("Fatal message: this should be logged", Map.of("error_code", 500, "system", "logging"));
-
-    /*
-     ✅ Test 3: Check that empty context is handled gracefully
-     - Logs without context should still be formatted correctly
-    */
-        logger.info("Info message with empty context", Map.of()); // Should log an empty context {}
-
-    /*
-     ✅ Test 4: Runtime reconfiguration
-     - Changing the logger's level at runtime
-     - Previous configuration should be replaced with the new one
-    */
-        System.out.println("\n--- Changing to DEBUG level again at runtime ---");
-        LoggerConfig debugConfig = new LoggerConfig(LogLevel.DEBUG, consoleAppender, simpleFormatter);
+        /*
+         ✅ Test 4: Runtime reconfiguration
+         */
+        System.out.println("\n--- Changing to DEBUG level at runtime ---");
+        LoggerConfig debugConfig = new LoggerConfig(LogLevel.DEBUG, List.of(consoleAppender), simpleFormatter);
         logger.setConfig(debugConfig);
 
         logger.debug("Debug message after reconfiguration", Map.of("test", "runtime-config"));
-        logger.info("Info message after reconfiguration", Map.of("test", "runtime-config"));
+        logger.info("Info message after reconfiguration and it will not be logged", Map.of("test", "runtime-config"));
 
         System.out.println("\nLogging demonstration completed. Check application.log for JSON formatted logs.");
     }
