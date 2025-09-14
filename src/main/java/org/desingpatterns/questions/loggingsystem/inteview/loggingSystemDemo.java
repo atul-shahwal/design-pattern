@@ -1,4 +1,4 @@
-package org.desingpatterns.questions.loggingsystem.gemini;
+package org.desingpatterns.questions.loggingsystem.inteview;
 
 import java.io.FileWriter;
 import java.io.IOException;
