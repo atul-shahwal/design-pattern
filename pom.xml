@@ -19,6 +19,12 @@
             <version>1.18.40</version> <!-- Use the latest version available -->
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>ch.hsr</groupId>
+            <artifactId>geohash</artifactId>
+            <version>1.4.0</version>
+        </dependency>
+
     </dependencies>
 
     <properties>
